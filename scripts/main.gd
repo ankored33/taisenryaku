@@ -6,6 +6,8 @@ const BattleHudController = preload("res://scripts/ui/battle_hud_controller.gd")
 const BattleDebugToolsController = preload("res://scripts/debug/battle_debug_tools_controller.gd")
 const ProductionDialogController = preload("res://scripts/ui/production_dialog_controller.gd")
 const DeploymentDialogController = preload("res://scripts/ui/deployment_dialog_controller.gd")
+const BattleDefeatEffectService = preload("res://scripts/ui/battle_defeat_effect_service.gd")
+const BattleStageSetupService = preload("res://scripts/ui/battle_stage_setup_service.gd")
 
 const CAMERA_SPEED := 1152.0
 const VIEW_PADDING := 12.0
@@ -335,7 +337,7 @@ func _on_defeat_condition_met(_reason: String) -> void:
 	_report_battle_result_once(false)
 
 func _load_defeat_effect_config() -> void:
-	defeat_effect_config = {
+	var fallback := {
 		"id": "defeat_explosion",
 		"trigger": "on_enemy_defeat",
 		"vfx": {
@@ -351,59 +353,10 @@ func _load_defeat_effect_config() -> void:
 			"volume": 0.9
 		}
 	}
-	var file := FileAccess.open(DEFEAT_EFFECT_CONFIG_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if parsed is Dictionary:
-		defeat_effect_config = (parsed as Dictionary).duplicate(true)
+	defeat_effect_config = BattleDefeatEffectService.load_config(DEFEAT_EFFECT_CONFIG_PATH, fallback)
 
 func _play_enemy_defeat_explosion(local_position: Vector2) -> void:
-	var vfx_variant: Variant = defeat_effect_config.get("vfx", {})
-	var vfx: Dictionary = vfx_variant if vfx_variant is Dictionary else {}
-	var offset_y := 1.0
-	var offset_variant: Variant = vfx.get("offset", [0, 1.0, 0])
-	if offset_variant is Array:
-		var offset_array := offset_variant as Array
-		if offset_array.size() >= 2:
-			offset_y = float(offset_array[1])
-	var scale_factor := maxf(0.1, float(vfx.get("scale", 1.0)))
-	var lifetime_sec := maxf(0.8, float(vfx.get("lifetime_sec", 1.8)))
-	var effect_node := Node2D.new()
-	effect_node.position = local_position + Vector2(0.0, -float(board.tile_height) * 0.5 * offset_y)
-	board.add_child(effect_node)
-
-	var particles := CPUParticles2D.new()
-	particles.one_shot = true
-	particles.emitting = false
-	particles.lifetime = lifetime_sec
-	particles.explosiveness = 1.0
-	particles.amount = maxi(1, int(vfx.get("particle_count", 42)))
-	particles.spread = 180.0
-	particles.direction = Vector2.RIGHT
-	particles.initial_velocity_min = maxf(0.0, float(vfx.get("particle_speed_min", 80.0))) * scale_factor
-	particles.initial_velocity_max = maxf(particles.initial_velocity_min, float(vfx.get("particle_speed_max", 240.0)) * scale_factor)
-	particles.gravity = Vector2(0.0, 280.0)
-	particles.scale_amount_min = 0.7 * scale_factor
-	particles.scale_amount_max = 1.6 * scale_factor
-
-	var grad := Gradient.new()
-	grad.colors = PackedColorArray([
-		Color(1.0, 0.98, 0.76, 1.0),
-		Color(1.0, 0.52, 0.22, 0.92),
-		Color(0.36, 0.08, 0.05, 0.0)
-	])
-	grad.offsets = PackedFloat32Array([0.0, 0.42, 1.0])
-	particles.color_ramp = grad
-
-	effect_node.add_child(particles)
-	particles.emitting = true
-
-	var timer := get_tree().create_timer(lifetime_sec + 0.45)
-	timer.timeout.connect(func() -> void:
-		if is_instance_valid(effect_node):
-			effect_node.queue_free()
-	)
+	BattleDefeatEffectService.play_enemy_defeat_explosion(board, local_position, defeat_effect_config)
 
 func _on_debug_victory_pressed() -> void:
 	_report_battle_result_once(true)
@@ -440,60 +393,28 @@ func _apply_stage_map_settings() -> void:
 		has_stage_camera_config = false
 		stage_camera_config = {}
 		return
-	var map_data: Dictionary = map_data_variant
-	board.cols = maxi(1, int(map_data.get("cols", board.cols)))
-	board.rows = maxi(1, int(map_data.get("rows", board.rows)))
-	var tile_width := maxi(1, int(map_data.get("tile_width", int(board.get("tile_width")))))
-	var tile_height := maxi(1, int(map_data.get("tile_height", int(board.get("tile_height")))))
-	var hex_side_length := maxi(0, int(map_data.get("hex_side_length", int(board.get("hex_side_length")))))
-	var stagger_axis := str(map_data.get("stagger_axis", str(board.get("stagger_axis"))))
-	var stagger_index := str(map_data.get("stagger_index", str(board.get("stagger_index"))))
-	board.configure_hex_metrics(tile_width, tile_height, hex_side_length, stagger_axis, stagger_index)
-	board.apply_stage_terrain(stage_data)
-	stage_background_path = str(map_data.get("background_image", ""))
-	var camera_variant: Variant = map_data.get("camera", {})
-	has_stage_camera_config = camera_variant is Dictionary
-	stage_camera_config = (camera_variant as Dictionary).duplicate(true) if has_stage_camera_config else {}
+	var setup := BattleStageSetupService.apply_stage_map_settings(board, stage_data)
+	stage_background_path = str(setup.get("background_path", ""))
+	has_stage_camera_config = bool(setup.get("has_camera_config", false))
+	var config_variant: Variant = setup.get("camera_config", {})
+	stage_camera_config = (config_variant as Dictionary).duplicate(true) if config_variant is Dictionary else {}
 
 func _apply_stage_initial_camera_if_needed() -> void:
-	if not has_stage_camera_config:
-		return
-	var target_local := _stage_camera_target_local()
-	var target_zoom := _stage_camera_target_zoom()
-	board_zoom = target_zoom
-	var viewport_rect := get_viewport_rect()
-	var side_gutter := left_panel.size.x + VIEW_PADDING
-	var view_left := side_gutter
-	var view_top := VIEW_PADDING
-	var view_right := viewport_rect.size.x - side_gutter
-	var view_bottom := viewport_rect.size.y - VIEW_PADDING
-	var view_center := Vector2(
-		(view_left + view_right) * 0.5,
-		(view_top + view_bottom) * 0.5
+	var camera_result := BattleStageSetupService.compute_initial_camera(
+		board,
+		has_stage_camera_config,
+		stage_camera_config,
+		board_rect,
+		left_panel.size.x,
+		VIEW_PADDING,
+		get_viewport_rect(),
+		board_anchor
 	)
-	board_pan = view_center - board_anchor - (target_local * board_zoom)
+	if not bool(camera_result.get("applied", false)):
+		return
+	board_zoom = float(camera_result.get("zoom", board_zoom))
+	board_pan = camera_result.get("pan", board_pan) as Vector2
 	_apply_board_transform()
-
-func _stage_camera_target_zoom() -> float:
-	return 1.0
-
-func _stage_camera_target_local() -> Vector2:
-	var fallback := board_rect.position + board_rect.size * 0.5
-	if not has_stage_camera_config:
-		return fallback
-	if stage_camera_config.has("tile"):
-		var tile_raw: Variant = stage_camera_config.get("tile", [])
-		if tile_raw is Array and (tile_raw as Array).size() >= 2:
-			var tile := tile_raw as Array
-			var q := int(tile[0])
-			var r := int(tile[1])
-			return board.map_to_local(Vector2i(q, r))
-	if stage_camera_config.has("local_pos"):
-		var pos_raw: Variant = stage_camera_config.get("local_pos", [])
-		if pos_raw is Array and (pos_raw as Array).size() >= 2:
-			var pos := pos_raw as Array
-			return Vector2(float(pos[0]), float(pos[1]))
-	return fallback
 
 func _ensure_dialogs() -> void:
 	if turn_start_dialog == null:

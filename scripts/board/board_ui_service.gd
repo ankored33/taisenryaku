@@ -9,7 +9,7 @@ static func update_status(board: HexBoard, text: String) -> void:
 
 static func update_turn_label(board: HexBoard) -> void:
 	if board.turn_label != null:
-		board.turn_label.text = board._turn_text()
+		board.turn_label.text = board.query_turn_text()
 
 static func update_unit_info(board: HexBoard, unit: Dictionary) -> void:
 	if board.unit_info_label == null:
@@ -40,7 +40,7 @@ static func update_tile_info(board: HexBoard, tile: Vector2i) -> void:
 	if board.tile_info_label == null:
 		return
 	var terrain := board.query_terrain_type(tile)
-	var move_text := "通行不可" if board.query_is_terrain_impassable(terrain) else str(board._movement_cost_for_tile(tile))
+	var move_text := "通行不可" if board.query_is_terrain_impassable(terrain) else str(board.query_movement_cost_for_tile(tile))
 	var text := "カーソル: (%d, %d)\n地形: %s\n移動コスト: %s" % [tile.x, tile.y, terrain, move_text]
 	var capture_point := board.query_capture_point_at(tile)
 	if not capture_point.is_empty():

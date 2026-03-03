@@ -93,7 +93,7 @@ static func try_produce_on_pending_tile(board: HexBoard, unit_class: String, fac
 	board.units.append(template)
 	board.faction_mp[faction] = mp - cost
 	board.pending_production_tile = Vector2i(-1, -1)
-	board._rebuild_unit_occupancy()
+	board.cmd_rebuild_unit_occupancy()
 	BoardVisibilityService.recompute_visibility_on_board(board)
 	board.cmd_update_turn_label()
 	board.cmd_update_status("%s を生産しました。MP -%d (残り %d)" % [
@@ -171,7 +171,7 @@ static func _next_production_unit_id(board: HexBoard, faction: String, unit_clas
 	var base := "%s_%s" % [faction.strip_edges().to_lower(), unit_class.strip_edges().to_lower()]
 	var candidate := "%s_1" % base
 	var suffix := 1
-	while board._unit_index_by_id(candidate) != -1:
+	while board.query_unit_index_by_id(candidate) != -1:
 		suffix += 1
 		candidate = "%s_%d" % [base, suffix]
 	return candidate

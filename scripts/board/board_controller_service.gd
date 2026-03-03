@@ -4,7 +4,7 @@ extends RefCounted
 const UnitState = preload("res://scripts/board/unit_state.gd")
 
 static func handle_click(board: HexBoard, tile: Vector2i) -> void:
-	if board.is_ai_running or board.is_turn_start_pause:
+	if board.query_is_ai_running() or board.query_is_turn_start_pause():
 		return
 	if board.has_method("query_is_deployment_active") and bool(board.query_is_deployment_active()):
 		if board.has_method("cmd_try_deploy_selected_unit_at"):
@@ -18,61 +18,65 @@ static func handle_click(board: HexBoard, tile: Vector2i) -> void:
 		return
 	var target_idx = board.query_unit_at(tile)
 	if target_idx != -1:
-		var target_unit: Dictionary = board.units[target_idx]
+		var target_unit: Dictionary = board.query_unit(target_idx)
 		if str(target_unit.get(UnitState.FACTION, "")).strip_edges().to_lower() != "player":
 			if not board.query_is_unit_visible_to_player(target_idx):
 				target_idx = -1
-	if board.selected_unit_idx == -1:
+	var selected_idx := board.query_selected_unit_idx()
+	if selected_idx == -1:
 		if target_idx == -1 and _try_open_production_menu(board, tile):
 			return
 		if target_idx != -1:
-			board.selected_unit_idx = target_idx
+			board.cmd_set_selected_unit_idx(target_idx)
 			board.cmd_set_unit_action_mode("")
 			board.queue_redraw()
-			board.cmd_update_status(board.query_selected_text(board.units[target_idx]))
-			board.cmd_update_unit_info(board.units[target_idx])
-			var selected_unit: Dictionary = board.units[target_idx]
+			var target_unit := board.query_unit(target_idx)
+			board.cmd_update_status(board.query_selected_text(target_unit))
+			board.cmd_update_unit_info(target_unit)
+			var selected_unit: Dictionary = target_unit
 			var after_move := bool(selected_unit.get(UnitState.MOVED, false))
 			board.cmd_request_unit_action_menu(target_idx, after_move)
 		return
-	if board.selected_unit_idx < 0 or board.selected_unit_idx >= board.units.size():
-		board.selected_unit_idx = -1
+	if selected_idx < 0 or selected_idx >= board.query_unit_count():
+		board.cmd_set_selected_unit_idx(-1)
 		board.cmd_set_unit_action_mode("")
 		board.cmd_clear_unit_info()
 		board.queue_redraw()
 		return
 
-	var selected: Dictionary = board.units[board.selected_unit_idx]
+	var selected: Dictionary = board.query_unit(selected_idx)
 	var start = board.query_to_vec2i(selected[UnitState.POS])
 	var action_mode := board.query_unit_action_mode()
 
-	if target_idx != -1 and target_idx == board.selected_unit_idx:
+	if target_idx != -1 and target_idx == selected_idx:
 		var selected_after_move := bool(selected.get(UnitState.MOVED, false))
-		board.cmd_request_unit_action_menu(board.selected_unit_idx, selected_after_move)
-		board.cmd_update_status(board.query_selected_text(board.units[target_idx]))
-		board.cmd_update_unit_info(board.units[target_idx])
+		var target_unit := board.query_unit(target_idx)
+		board.cmd_request_unit_action_menu(selected_idx, selected_after_move)
+		board.cmd_update_status(board.query_selected_text(target_unit))
+		board.cmd_update_unit_info(target_unit)
 		return
 
-	if target_idx != -1 and board.units[target_idx][UnitState.FACTION] == selected[UnitState.FACTION]:
-		board.selected_unit_idx = target_idx
+	if target_idx != -1 and board.query_unit(target_idx).get(UnitState.FACTION, "") == selected.get(UnitState.FACTION, ""):
+		board.cmd_set_selected_unit_idx(target_idx)
 		board.cmd_set_unit_action_mode("")
 		board.queue_redraw()
-		board.cmd_update_status(board.query_selected_text(board.units[target_idx]))
-		board.cmd_update_unit_info(board.units[target_idx])
-		var switched_unit: Dictionary = board.units[target_idx]
+		var switched_unit: Dictionary = board.query_unit(target_idx)
+		board.cmd_update_status(board.query_selected_text(switched_unit))
+		board.cmd_update_unit_info(switched_unit)
 		var switched_after_move := bool(switched_unit.get(UnitState.MOVED, false))
 		board.cmd_request_unit_action_menu(target_idx, switched_after_move)
 		return
 
-	if str(selected[UnitState.FACTION]) != board.current_faction:
+	if str(selected[UnitState.FACTION]) != board.query_current_faction():
 		if target_idx != -1:
-			board.selected_unit_idx = target_idx
+			board.cmd_set_selected_unit_idx(target_idx)
 			board.cmd_set_unit_action_mode("")
 			board.queue_redraw()
-			board.cmd_update_status(board.query_selected_text(board.units[target_idx]))
-			board.cmd_update_unit_info(board.units[target_idx])
+			var target_unit := board.query_unit(target_idx)
+			board.cmd_update_status(board.query_selected_text(target_unit))
+			board.cmd_update_unit_info(target_unit)
 		else:
-			board.selected_unit_idx = -1
+			board.cmd_set_selected_unit_idx(-1)
 			board.cmd_set_unit_action_mode("")
 			board.queue_redraw()
 			board.cmd_update_status("選択を解除しました。")
@@ -87,13 +91,14 @@ static func handle_click(board: HexBoard, tile: Vector2i) -> void:
 		_handle_move_mode_click(board, selected, tile, target_idx)
 		return
 
-	if target_idx != -1 and board.units[target_idx][UnitState.FACTION] != board.current_faction:
+	if target_idx != -1 and board.query_unit(target_idx).get(UnitState.FACTION, "") != board.query_current_faction():
 		if action_mode == "":
-			board.selected_unit_idx = target_idx
+			board.cmd_set_selected_unit_idx(target_idx)
 			board.cmd_set_unit_action_mode("")
 			board.queue_redraw()
-			board.cmd_update_status(board.query_selected_text(board.units[target_idx]))
-			board.cmd_update_unit_info(board.units[target_idx])
+			var target_unit := board.query_unit(target_idx)
+			board.cmd_update_status(board.query_selected_text(target_unit))
+			board.cmd_update_unit_info(target_unit)
 			board.cmd_request_unit_action_menu(target_idx, false)
 		else:
 			board.cmd_update_status("行動メニューで「攻撃」を選択してから敵をクリックしてください。")
@@ -112,8 +117,8 @@ static func _try_open_production_menu(board: HexBoard, tile: Vector2i) -> bool:
 		return false
 	if not bool(board.query_can_open_production_menu(tile)):
 		return false
-	if board.selected_unit_idx != -1:
-		board.selected_unit_idx = -1
+	if board.query_selected_unit_idx() != -1:
+		board.cmd_set_selected_unit_idx(-1)
 		board.cmd_set_unit_action_mode("")
 		board.cmd_clear_unit_info()
 		board.queue_redraw()
@@ -128,11 +133,12 @@ static func _handle_attack_mode_click(
 	start: Vector2i,
 	target_idx: int
 ) -> void:
-	if target_idx == -1 or board.units[target_idx][UnitState.FACTION] == board.current_faction:
+	var selected_idx := board.query_selected_unit_idx()
+	if target_idx == -1 or board.query_unit(target_idx).get(UnitState.FACTION, "") == board.query_current_faction():
 		board.cmd_update_status("攻撃対象の敵ユニットを選択してください。")
 		board.cmd_update_unit_info(selected)
 		return
-	var attack_target_center = board.query_to_vec2i(board.units[target_idx].get(UnitState.POS, Vector2i.ZERO))
+	var attack_target_center = board.query_to_vec2i(board.query_unit(target_idx).get(UnitState.POS, Vector2i.ZERO))
 	var attack_distance = board.query_hex_distance(start, attack_target_center)
 	if bool(selected.get(UnitState.ATTACKED, false)):
 		board.cmd_set_unit_action_mode("")
@@ -140,7 +146,7 @@ static func _handle_attack_mode_click(
 		board.cmd_update_unit_info(selected)
 		return
 	if board.query_can_unit_attack_at_range(selected, attack_distance):
-		board.cmd_request_attack_confirmation(board.selected_unit_idx, target_idx, attack_distance)
+		board.cmd_request_attack_confirmation(selected_idx, target_idx, attack_distance)
 	else:
 		board.cmd_update_status("%s は距離 %d では攻撃できません。" % [selected[UnitState.NAME], attack_distance])
 		board.cmd_update_unit_info(selected)
@@ -151,11 +157,12 @@ static func _handle_move_mode_click(
 	tile: Vector2i,
 	target_idx: int
 ) -> void:
+	var selected_idx := board.query_selected_unit_idx()
 	if target_idx != -1:
 		board.cmd_update_status("移動先タイルを選択してください。")
 		board.cmd_update_unit_info(selected)
 		return
-	if not board.query_can_move_unit_to(board.selected_unit_idx, tile):
+	if not board.query_can_move_unit_to(selected_idx, tile):
 		board.cmd_update_status("その場所には移動できません。")
 		board.cmd_update_unit_info(selected)
 		return
@@ -169,13 +176,13 @@ static func _handle_move_mode_click(
 		board.cmd_update_status("%s はこのターンすでに移動済みです。" % selected[UnitState.NAME])
 		board.cmd_update_unit_info(selected)
 		return
-	var move_result := board.cmd_execute_unit_move(board.selected_unit_idx, tile)
+	var move_result := board.cmd_execute_unit_move(selected_idx, tile)
 	var awarded := bool(move_result.get("awarded", false))
 	board.cmd_set_unit_action_mode("")
-	if not awarded and board.selected_unit_idx >= 0 and board.selected_unit_idx < board.units.size():
+	if not awarded and selected_idx >= 0 and selected_idx < board.query_unit_count():
 		board.cmd_update_status("ユニットを移動しました。")
-		board.cmd_update_unit_info(board.units[board.selected_unit_idx])
-		board.cmd_request_unit_action_menu(board.selected_unit_idx, true)
+		board.cmd_update_unit_info(board.query_unit(selected_idx))
+		board.cmd_request_unit_action_menu(selected_idx, true)
 	elif not awarded:
 		board.cmd_update_status("ユニットを移動しました。")
 		board.cmd_clear_unit_info()

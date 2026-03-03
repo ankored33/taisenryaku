@@ -10,7 +10,7 @@ static func start_initial_phase(board: HexBoard) -> void:
 	board.deployment_active = true
 	board.deployment_faction = DEFAULT_DEPLOY_FACTION
 	board.deployment_selected_unit_class = ""
-	board.selected_unit_idx = -1
+	board.cmd_set_selected_unit_idx(-1)
 	board.cmd_set_unit_action_mode("")
 	board.cmd_clear_unit_info()
 	board.queue_redraw()
@@ -102,7 +102,7 @@ static func try_deploy_selected_at(board: HexBoard, tile: Vector2i) -> bool:
 	template[UnitState.ATTACKED] = false
 	board.units.append(template)
 	board.faction_mp[board.deployment_faction] = mp - cost
-	board._rebuild_unit_occupancy()
+	board.cmd_rebuild_unit_occupancy()
 	BoardVisibilityService.recompute_visibility_on_board(board)
 	board.cmd_update_turn_label()
 	board.cmd_update_status("%s を配置しました。MP -%d (残り %d)" % [
@@ -131,7 +131,7 @@ static func _next_unit_id(board: HexBoard, faction: String, unit_class: String) 
 	var base := "%s_%s" % [faction.strip_edges().to_lower(), unit_class.strip_edges().to_lower()]
 	var candidate := "%s_deploy_1" % base
 	var suffix := 1
-	while board._unit_index_by_id(candidate) != -1:
+	while board.query_unit_index_by_id(candidate) != -1:
 		suffix += 1
 		candidate = "%s_deploy_%d" % [base, suffix]
 	return candidate

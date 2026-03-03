@@ -56,13 +56,6 @@ const DEFAULT_TURN_LIMIT := 30
 
 var default_terrain := "plain"
 var terrain_overrides := {}
-var unit_catalog := {}
-var ai_groups := {}
-var units: Array[Dictionary] = []
-var unit_occupancy := {}
-var selected_unit_idx := -1
-var current_faction := "player"
-var turn_count := 1
 var turn_label: Label
 var status_label: Label
 var unit_info_label: Label
@@ -71,33 +64,136 @@ var attack_confirm_handler: Callable
 var move_cancel_confirm_handler: Callable
 var unit_action_menu_handler: Callable
 var turn_start_handler: Callable
-var pending_attack_attacker_idx := -1
-var pending_attack_defender_idx := -1
-var pending_attack_distance := -1
 var runtime_state := BoardRuntimeState.new(
 	DEFAULT_INITIAL_PLAYER_MP,
 	DEFAULT_INITIAL_ENEMY_MP,
 	DEFAULT_TURN_LIMIT
 )
+var unit_catalog: Dictionary:
+	get:
+		return runtime_state.unit_catalog
+	set(value):
+		runtime_state.unit_catalog = value
+var ai_groups: Dictionary:
+	get:
+		return runtime_state.ai_groups
+	set(value):
+		runtime_state.ai_groups = value
+var units: Array[Dictionary]:
+	get:
+		return runtime_state.units
+	set(value):
+		runtime_state.units = value
+var unit_occupancy: Dictionary:
+	get:
+		return runtime_state.unit_occupancy
+	set(value):
+		runtime_state.unit_occupancy = value
+var selected_unit_idx: int:
+	get:
+		return runtime_state.selected_unit_idx
+	set(value):
+		runtime_state.selected_unit_idx = value
+var current_faction: String:
+	get:
+		return runtime_state.current_faction
+	set(value):
+		runtime_state.current_faction = value
+var turn_count: int:
+	get:
+		return runtime_state.turn_count
+	set(value):
+		runtime_state.turn_count = value
+var pending_attack_attacker_idx: int:
+	get:
+		return runtime_state.pending_attack_attacker_idx
+	set(value):
+		runtime_state.pending_attack_attacker_idx = value
+var pending_attack_defender_idx: int:
+	get:
+		return runtime_state.pending_attack_defender_idx
+	set(value):
+		runtime_state.pending_attack_defender_idx = value
+var pending_attack_distance: int:
+	get:
+		return runtime_state.pending_attack_distance
+	set(value):
+		runtime_state.pending_attack_distance = value
 var pending_production_tile: Vector2i:
 	get:
 		return runtime_state.pending_production_tile
 	set(value):
 		runtime_state.pending_production_tile = value
-var pending_move_cancel_unit_id := ""
-var last_move_unit_id := ""
-var last_move_from := Vector2i.ZERO
-var last_move_to := Vector2i.ZERO
-var last_move_action_sequence := -1
-var last_move_revealed_new_enemy := false
-var action_sequence := 0
-var ai_faction := "enemy"
-var is_ai_running := false
-var is_friendly_auto_running := false
-var is_turn_start_pause := false
-var unit_action_mode := ""
-var hovered_tile := Vector2i(-1, -1)
-var unplaced_unit_ids: Array[String] = []
+var pending_move_cancel_unit_id: String:
+	get:
+		return runtime_state.pending_move_cancel_unit_id
+	set(value):
+		runtime_state.pending_move_cancel_unit_id = value
+var last_move_unit_id: String:
+	get:
+		return runtime_state.last_move_unit_id
+	set(value):
+		runtime_state.last_move_unit_id = value
+var last_move_from: Vector2i:
+	get:
+		return runtime_state.last_move_from
+	set(value):
+		runtime_state.last_move_from = value
+var last_move_to: Vector2i:
+	get:
+		return runtime_state.last_move_to
+	set(value):
+		runtime_state.last_move_to = value
+var last_move_action_sequence: int:
+	get:
+		return runtime_state.last_move_action_sequence
+	set(value):
+		runtime_state.last_move_action_sequence = value
+var last_move_revealed_new_enemy: bool:
+	get:
+		return runtime_state.last_move_revealed_new_enemy
+	set(value):
+		runtime_state.last_move_revealed_new_enemy = value
+var action_sequence: int:
+	get:
+		return runtime_state.action_sequence
+	set(value):
+		runtime_state.action_sequence = value
+var ai_faction: String:
+	get:
+		return runtime_state.ai_faction
+	set(value):
+		runtime_state.ai_faction = value
+var is_ai_running: bool:
+	get:
+		return runtime_state.is_ai_running
+	set(value):
+		runtime_state.is_ai_running = value
+var is_friendly_auto_running: bool:
+	get:
+		return runtime_state.is_friendly_auto_running
+	set(value):
+		runtime_state.is_friendly_auto_running = value
+var is_turn_start_pause: bool:
+	get:
+		return runtime_state.is_turn_start_pause
+	set(value):
+		runtime_state.is_turn_start_pause = value
+var unit_action_mode: String:
+	get:
+		return runtime_state.unit_action_mode
+	set(value):
+		runtime_state.unit_action_mode = value
+var hovered_tile: Vector2i:
+	get:
+		return runtime_state.hovered_tile
+	set(value):
+		runtime_state.hovered_tile = value
+var unplaced_unit_ids: Array[String]:
+	get:
+		return runtime_state.unplaced_unit_ids
+	set(value):
+		runtime_state.unplaced_unit_ids = value
 var battle_score: int:
 	get:
 		return runtime_state.battle_score
@@ -113,24 +209,92 @@ var faction_initial_mp: Dictionary:
 		return runtime_state.faction_initial_mp
 	set(value):
 		runtime_state.faction_initial_mp = value
-var transport_goal_enabled := false
-var transport_goal_tile := Vector2i(-1, -1)
-var transport_goal_target_faction := "player"
-var transport_goal_target_unit_class := ""
-var transport_goal_score := 100
-var delivered_transport_ids := {}
-var capture_points := {}
-var capture_allowed_unit_classes: Array[String] = ["infantry"]
-var move_animations := {}
+var transport_goal_enabled: bool:
+	get:
+		return runtime_state.transport_goal_enabled
+	set(value):
+		runtime_state.transport_goal_enabled = value
+var transport_goal_tile: Vector2i:
+	get:
+		return runtime_state.transport_goal_tile
+	set(value):
+		runtime_state.transport_goal_tile = value
+var transport_goal_target_faction: String:
+	get:
+		return runtime_state.transport_goal_target_faction
+	set(value):
+		runtime_state.transport_goal_target_faction = value
+var transport_goal_target_unit_class: String:
+	get:
+		return runtime_state.transport_goal_target_unit_class
+	set(value):
+		runtime_state.transport_goal_target_unit_class = value
+var transport_goal_score: int:
+	get:
+		return runtime_state.transport_goal_score
+	set(value):
+		runtime_state.transport_goal_score = value
+var delivered_transport_ids: Dictionary:
+	get:
+		return runtime_state.delivered_transport_ids
+	set(value):
+		runtime_state.delivered_transport_ids = value
+var capture_points: Dictionary:
+	get:
+		return runtime_state.capture_points
+	set(value):
+		runtime_state.capture_points = value
+var capture_allowed_unit_classes: Array[String]:
+	get:
+		return runtime_state.capture_allowed_unit_classes
+	set(value):
+		runtime_state.capture_allowed_unit_classes = value
+var move_animations: Dictionary:
+	get:
+		return runtime_state.move_animations
+	set(value):
+		runtime_state.move_animations = value
 var battle_sequence_handler: Callable
-var is_battle_sequence_playing := false
-var terrain_color_overrides := {}
-var terrain_move_cost_overrides := {}
-var visible_tiles_by_faction := {}
-var explored_tiles_by_faction := {}
-var debug_reveal_all := false
-var unit_icon_cache := {}
-var units_json_path := ""
+var is_battle_sequence_playing: bool:
+	get:
+		return runtime_state.is_battle_sequence_playing
+	set(value):
+		runtime_state.is_battle_sequence_playing = value
+var terrain_color_overrides: Dictionary:
+	get:
+		return runtime_state.terrain_color_overrides
+	set(value):
+		runtime_state.terrain_color_overrides = value
+var terrain_move_cost_overrides: Dictionary:
+	get:
+		return runtime_state.terrain_move_cost_overrides
+	set(value):
+		runtime_state.terrain_move_cost_overrides = value
+var visible_tiles_by_faction: Dictionary:
+	get:
+		return runtime_state.visible_tiles_by_faction
+	set(value):
+		runtime_state.visible_tiles_by_faction = value
+var explored_tiles_by_faction: Dictionary:
+	get:
+		return runtime_state.explored_tiles_by_faction
+	set(value):
+		runtime_state.explored_tiles_by_faction = value
+var debug_reveal_all: bool:
+	get:
+		return runtime_state.debug_reveal_all
+	set(value):
+		runtime_state.debug_reveal_all = value
+var unit_icon_cache: Dictionary:
+	get:
+		return runtime_state.unit_icon_cache
+	set(value):
+		runtime_state.unit_icon_cache = value
+var units_json_path: String:
+	get:
+		return runtime_state.units_json_path
+	set(value):
+		runtime_state.units_json_path = value
 var deployment_active: bool:
 	get:
 		return runtime_state.deployment_active
@@ -557,8 +721,35 @@ func query_unit(idx: int) -> Dictionary:
 func query_current_faction() -> String:
 	return str(current_faction)
 
+func query_ai_faction() -> String:
+	return str(ai_faction)
+
 func query_turn_count() -> int:
 	return int(turn_count)
+
+func query_selected_unit_idx() -> int:
+	return int(selected_unit_idx)
+
+func cmd_set_selected_unit_idx(unit_idx: int) -> void:
+	selected_unit_idx = unit_idx
+
+func query_is_ai_running() -> bool:
+	return bool(is_ai_running)
+
+func cmd_set_ai_running(running: bool) -> void:
+	is_ai_running = running
+
+func query_is_friendly_auto_running() -> bool:
+	return bool(is_friendly_auto_running)
+
+func cmd_set_friendly_auto_running(running: bool) -> void:
+	is_friendly_auto_running = running
+
+func query_is_turn_start_pause() -> bool:
+	return bool(is_turn_start_pause)
+
+func query_unit_index_by_id(unit_id: String) -> int:
+	return _unit_index_by_id(unit_id)
 
 func query_is_unit_animating(unit_id: String) -> bool:
 	if unit_id == "":
@@ -900,6 +1091,9 @@ func query_unit_icon_texture(unit: Dictionary) -> Texture2D:
 func query_unit_can_attack(unit: Dictionary) -> bool:
 	return _unit_can_attack(unit)
 
+func query_has_attackable_enemy_from(unit_idx: int) -> bool:
+	return _has_attackable_enemy_from(unit_idx)
+
 func query_unit_min_range(unit: Dictionary) -> int:
 	return _unit_min_range(unit)
 
@@ -931,6 +1125,33 @@ func query_ai_production_allowed_classes(faction: String) -> Array[String]:
 
 func query_capture_income_for_faction(faction: String) -> int:
 	return _capture_income_for_faction(faction)
+
+func query_turn_text() -> String:
+	return _turn_text()
+
+func query_movement_cost_for_tile(tile: Vector2i) -> int:
+	return _movement_cost_for_tile(tile)
+
+func query_enemy_indices(faction: String) -> Array[int]:
+	return _get_enemy_indices(faction)
+
+func query_visible_enemy_indices(faction: String) -> Array[int]:
+	return _get_visible_enemy_indices(faction)
+
+func query_enemy_indices_for_scope(faction: String, scope: String) -> Array[int]:
+	return _get_enemy_indices_for_scope(faction, scope)
+
+func query_ai_profile_for_unit(unit_idx: int) -> Dictionary:
+	return _ai_profile_for_unit(unit_idx)
+
+func cmd_resolve_attack(attacker_idx: int, defender_idx: int, distance: int) -> void:
+	await _attack(attacker_idx, defender_idx, distance)
+
+func cmd_force_end_turn() -> void:
+	_end_turn()
+
+func cmd_rebuild_unit_occupancy() -> void:
+	_rebuild_unit_occupancy()
 
 func grant_turn_start_income_for_current_faction(announce: bool = false) -> int:
 	return _grant_turn_start_income(current_faction, announce)

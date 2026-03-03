@@ -7,16 +7,16 @@ const HexGridService = preload("res://scripts/board/hex_grid_service.gd")
 const BoardVisibilityService = preload("res://scripts/board/board_visibility_service.gd")
 
 static func try_run_ai_turn(board: HexBoard) -> void:
-	if board.current_faction != board.ai_faction:
+	if board.query_current_faction() != board.query_ai_faction():
 		return
-	if board.is_ai_running:
+	if board.query_is_ai_running():
 		return
-	board.is_ai_running = true
-	board.cmd_update_status("%s の自動行動中..." % str(board.ai_faction).to_upper())
-	await run_ai_turn(board, board.ai_faction)
+	board.cmd_set_ai_running(true)
+	board.cmd_update_status("%s の自動行動中..." % str(board.query_ai_faction()).to_upper())
+	await run_ai_turn(board, board.query_ai_faction())
 	await ai_wait(board, board.AI_TURN_END_DELAY_SEC)
-	board._end_turn()
-	board.is_ai_running = false
+	board.cmd_force_end_turn()
+	board.cmd_set_ai_running(false)
 
 static func run_ai_turn(board: HexBoard, faction: String) -> void:
 	var unit_ids: Array[String] = []
@@ -24,7 +24,7 @@ static func run_ai_turn(board: HexBoard, faction: String) -> void:
 		if str(unit.get(UnitState.FACTION, "")) == faction:
 			unit_ids.append(str(unit.get(UnitState.ID, "")))
 	for unit_id in unit_ids:
-		var unit_idx := board._unit_index_by_id(unit_id)
+		var unit_idx := board.query_unit_index_by_id(unit_id)
 		if unit_idx == -1:
 			continue
 		if str(board.units[unit_idx].get(UnitState.FACTION, "")) != faction:
@@ -65,7 +65,7 @@ static func take_ai_unit_action(board: HexBoard, unit_idx: int) -> bool:
 	if not force_goal_movement:
 		var best_now := best_attack_from_position(board, unit_idx, current_pos)
 		if int(best_now.get("target_idx", -1)) != -1:
-			await board._attack(unit_idx, int(best_now["target_idx"]), int(best_now["distance"]))
+			await board.cmd_resolve_attack(unit_idx, int(best_now["target_idx"]), int(best_now["distance"]))
 			return true
 
 	if bool(board.units[unit_idx].get(UnitState.MOVED, false)):
@@ -82,13 +82,13 @@ static func take_ai_unit_action(board: HexBoard, unit_idx: int) -> bool:
 		var move_result := board.cmd_execute_unit_move(unit_idx, target_pos)
 		moved = bool(move_result.get("moved", false))
 
-	var moved_idx := board._unit_index_by_id(moved_unit_id)
+	var moved_idx := board.query_unit_index_by_id(moved_unit_id)
 	if moved_idx == -1:
 		return moved
 	var pos_after_move := board.query_to_vec2i(board.units[moved_idx].get(UnitState.POS, Vector2i.ZERO))
 	var best_after_move := best_attack_from_position(board, moved_idx, pos_after_move)
 	if int(best_after_move.get("target_idx", -1)) != -1:
-		await board._attack(moved_idx, int(best_after_move["target_idx"]), int(best_after_move["distance"]))
+		await board.cmd_resolve_attack(moved_idx, int(best_after_move["target_idx"]), int(best_after_move["distance"]))
 		return true
 	return moved
 
@@ -98,7 +98,7 @@ static func ai_wait(board: HexBoard, seconds: float) -> void:
 	await board.get_tree().create_timer(seconds).timeout
 
 static func choose_ai_move(board: HexBoard, unit_idx: int, ai_profile: Dictionary = {}) -> Dictionary:
-	var reachable := board._compute_reachable_costs(unit_idx)
+	var reachable := board.query_reachable_costs(unit_idx)
 	var profile := ai_profile
 	if profile.is_empty():
 		profile = ai_profile_for_unit(board, unit_idx)
@@ -109,16 +109,16 @@ static func choose_ai_move(board: HexBoard, unit_idx: int, ai_profile: Dictionar
 		unit_idx,
 		board.units,
 		reachable,
-		Callable(board, "_unit_can_attack"),
-		Callable(board, "_can_unit_attack_at_range"),
-		Callable(board, "_get_enemy_indices"),
-		Callable(board, "_hex_distance"),
+		Callable(board, "query_unit_can_attack"),
+		Callable(board, "query_can_unit_attack_at_range"),
+		Callable(board, "query_enemy_indices"),
+		Callable(board, "query_hex_distance"),
 		profile
 	)
 
 static func auto_action_targets_for_unit(board: HexBoard, unit_idx: int, ai_profile: Dictionary) -> Array[Vector2i]:
 	var targets: Array[Vector2i] = []
-	if not board.is_friendly_auto_running:
+	if not board.query_is_friendly_auto_running():
 		return targets
 	if unit_idx < 0 or unit_idx >= board.units.size():
 		return targets
@@ -177,10 +177,10 @@ static func best_attack_from_position(board: HexBoard, attacker_idx: int, from_p
 		attacker_idx,
 		from_pos,
 		board.units,
-		Callable(board, "_unit_can_attack"),
-		Callable(board, "_can_unit_attack_at_range"),
-		Callable(board, "_get_enemy_indices"),
-		Callable(board, "_hex_distance"),
+		Callable(board, "query_unit_can_attack"),
+		Callable(board, "query_can_unit_attack_at_range"),
+		Callable(board, "query_enemy_indices"),
+		Callable(board, "query_hex_distance"),
 		ai_profile
 	)
 
@@ -191,7 +191,7 @@ static func score_attack(board: HexBoard, attacker_idx: int, defender_idx: int, 
 		defender_idx,
 		distance,
 		board.units,
-		Callable(board, "_can_unit_attack_at_range"),
+		Callable(board, "query_can_unit_attack_at_range"),
 		ai_profile
 	)
 
@@ -201,7 +201,7 @@ static func ai_profile_for_unit(board: HexBoard, unit_idx: int) -> Dictionary:
 	var unit := board.units[unit_idx]
 	var group_key := UnitState.AI_GROUP
 	var default_group := board.DEFAULT_AI_GROUP
-	if board.is_friendly_auto_running:
+	if board.query_is_friendly_auto_running():
 		group_key = UnitState.FRIENDLY_AUTO_AI_GROUP
 		default_group = board.DEFAULT_FRIENDLY_AUTO_AI_GROUP
 	var group := str(unit.get(group_key, default_group)).strip_edges().to_lower()
