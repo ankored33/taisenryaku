@@ -1,0 +1,17 @@
+{
+	"terrain_colors": {
+		"abyss": "0d0d17ff",
+		"basin": "ba4b0fff",
+		"forest": "12dd45ff",
+		"hill": "df7a15ff",
+		"peak": "a513b1ff",
+		"plain": "dacc59ff",
+		"water": "316cd6ff"
+	},
+	"terrain_move_costs": {
+		"basin": 1,
+		"forest": 2,
+		"hill": 2,
+		"plain": 1
+	}
+}

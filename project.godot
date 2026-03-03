@@ -1,0 +1,37 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="Game 3"
+run/main_scene="res://scenes/flow/title_scene.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/resizable=true
+window/size/min_width=1024
+window/size/min_height=576
+window/size/mode=0
+window/size/borderless=false
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[autoload]
+
+AudioManager="*res://scripts/audio/audio_manager.gd"
+GameFlow="*res://scripts/flow/game_flow.gd"

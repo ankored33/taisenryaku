@@ -1,0 +1,74 @@
+[gd_scene load_steps=3 format=3 uid="uid://cg3wyg1qlw8ae"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_5v3u1"]
+[ext_resource type="Script" path="res://scripts/hex_board.gd" id="2_h3x01"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_5v3u1")
+
+[node name="HexBoard" type="TileMap" parent="."]
+position = Vector2(70, 70)
+format = 2
+script = ExtResource("2_h3x01")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="LeftPanel" type="PanelContainer" parent="CanvasLayer"]
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 300.0
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/LeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/LeftPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Turn" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "手番: -"
+
+[node name="Status" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+text = "状態"
+autowrap_mode = 2
+
+[node name="EndTurnButton" type="Button" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+text = "ターン終了"
+
+[node name="FriendlyAutoButton" type="Button" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+text = "味方自動行動"
+
+[node name="UnitHeader" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "ユニット情報"
+
+[node name="UnitInfo" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+text = "ユニット未選択"
+autowrap_mode = 2
+
+[node name="EndTurnConfirm" type="ConfirmationDialog" parent="CanvasLayer"]
+title = "ターン終了"
+dialog_text = "現在の手番を終了しますか？"
+
+[node name="FriendlyAutoConfirm" type="ConfirmationDialog" parent="CanvasLayer"]
+title = "味方自動行動"
+dialog_text = "未行動の味方ユニットを自動行動させますか？"
+
+[node name="AttackConfirm" type="ConfirmationDialog" parent="CanvasLayer"]
+title = "攻撃"
+dialog_text = "攻撃を実行しますか？"
+
+[node name="MoveCancelConfirm" type="ConfirmationDialog" parent="CanvasLayer"]
+title = "移動取り消し"
+dialog_text = "この移動を取り消しますか？"

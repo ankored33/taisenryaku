@@ -1,0 +1,59 @@
+{
+  "groups": {
+    "default": {
+      "attack_opportunity_bonus": 1000.0,
+      "approach_weight": 1.0,
+      "move_distance_weight": 0.0,
+      "attack_bias": 1.0,
+      "kill_bonus_scale": 1.0,
+      "counter_threat_weight": 1.0,
+      "defender_hp_weight": 1.0
+    },
+    "aggressive": {
+      "attack_opportunity_bonus": 1100.0,
+      "approach_weight": 1.3,
+      "move_distance_weight": 0.2,
+      "attack_bias": 1.25,
+      "kill_bonus_scale": 1.3,
+      "counter_threat_weight": 0.8,
+      "defender_hp_weight": 0.8
+    },
+    "cautious": {
+      "attack_opportunity_bonus": 900.0,
+      "approach_weight": 0.8,
+      "move_distance_weight": -0.2,
+      "attack_bias": 0.95,
+      "kill_bonus_scale": 1.0,
+      "counter_threat_weight": 1.5,
+      "defender_hp_weight": 1.2
+    },
+    "friendly_auto_default": {
+      "attack_opportunity_bonus": 1000.0,
+      "approach_weight": 1.0,
+      "move_distance_weight": 0.0,
+      "attack_bias": 1.0,
+      "kill_bonus_scale": 1.0,
+      "counter_threat_weight": 1.0,
+      "defender_hp_weight": 1.0,
+      "goal_mode": "goal_ring_if_no_visible_enemy",
+      "enemy_scope": "visible",
+      "goal_weight": 1000.0,
+      "goal_move_distance_weight": 1.0,
+      "force_goal_movement": false
+    },
+    "friendly_auto_transport": {
+      "attack_opportunity_bonus": 1000.0,
+      "approach_weight": 1.0,
+      "move_distance_weight": 0.0,
+      "attack_bias": 1.0,
+      "kill_bonus_scale": 1.0,
+      "counter_threat_weight": 1.0,
+      "defender_hp_weight": 1.0,
+      "goal_mode": "goal_tile",
+      "enemy_scope": "visible",
+      "goal_weight": 1000.0,
+      "goal_move_distance_weight": 1.0,
+      "force_goal_movement": true
+    }
+  }
+}

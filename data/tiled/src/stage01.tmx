@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="hexagonal" renderorder="right-down" width="24" height="54" tilewidth="32" tileheight="32" infinite="0" hexsidelength="16" staggeraxis="y" staggerindex="odd" nextlayerid="12" nextobjectid="82">
+ <editorsettings>
+  <export target="../export/stage01.tmj" format="json"/>
+ </editorsettings>
+ <tileset firstgid="1" name="tileset-a" tilewidth="32" tileheight="32" tilecount="10" columns="5">
+  <image source="tileset/tileset-a.png" width="160" height="64"/>
+ </tileset>
+ <imagelayer id="2" name="画像レイヤー1" locked="1">
+  <image source="bgimage/stage01.png" width="792" height="1320"/>
+ </imagelayer>
+ <layer id="1" name="タイルレイヤー1" width="24" height="54" locked="1" opacity="0.5">
+  <data encoding="csv">
+8,8,8,8,8,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,8,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,8,4,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,4,4,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,4,4,4,4,4,4,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,4,4,4,4,2,2,4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,
+8,8,8,4,4,4,4,4,2,2,4,2,4,4,8,8,8,8,8,8,8,8,8,8,
+8,8,8,4,4,4,2,2,2,2,4,2,4,4,2,2,2,8,8,8,8,8,8,8,
+8,8,8,4,4,4,2,2,2,2,2,2,4,4,2,2,2,2,2,8,8,8,8,8,
+8,8,8,4,4,2,2,2,2,2,2,4,4,4,2,2,2,2,2,2,8,8,8,8,
+8,8,8,4,4,2,2,2,2,2,2,3,4,4,4,4,4,4,2,2,2,8,8,8,
+8,8,8,4,4,4,2,2,2,3,3,3,2,2,2,2,2,4,2,2,2,2,8,8,
+8,8,8,8,4,4,3,3,3,3,3,2,2,5,5,5,2,2,2,2,2,2,2,8,
+8,2,8,4,4,2,2,2,5,5,5,5,5,5,5,5,5,2,2,2,2,2,2,8,
+8,2,2,4,4,2,2,5,5,5,5,5,5,5,5,5,5,5,2,2,5,5,2,2,
+2,2,4,4,2,5,5,5,5,5,5,5,5,5,5,5,6,5,2,2,2,2,2,2,
+2,2,4,4,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,
+2,2,4,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,2,8,
+2,2,4,2,2,5,5,6,5,5,5,5,5,5,5,5,5,5,5,2,8,8,8,8,
+2,2,2,2,5,5,5,5,5,5,5,3,3,3,3,3,3,8,8,8,8,8,8,8,
+2,2,2,2,2,5,5,5,5,5,3,3,2,2,2,2,3,3,8,8,8,8,8,8,
+2,2,2,2,2,5,5,5,5,3,3,2,2,2,2,2,2,2,8,8,8,8,8,8,
+8,2,2,2,2,2,5,5,3,3,2,2,2,2,2,2,2,2,2,8,8,8,8,8,
+8,2,2,2,2,2,8,3,2,2,2,2,2,2,2,2,2,2,2,8,8,8,8,8,
+0,8,2,2,2,2,8,2,2,2,2,2,5,5,5,5,2,2,2,2,8,8,8,8,
+8,8,2,2,2,8,2,2,2,2,5,5,5,3,5,5,5,2,2,2,8,8,8,8,
+8,8,8,2,2,8,2,2,2,2,5,5,5,5,5,5,5,5,2,2,8,8,8,8,
+8,8,8,8,8,2,2,2,2,5,5,5,5,5,5,5,5,2,2,2,8,8,8,8,
+8,8,8,8,8,8,2,2,2,2,5,5,5,5,5,5,5,2,2,2,2,8,8,8,
+8,8,8,8,8,2,2,2,2,2,2,5,5,5,5,5,2,2,2,2,2,8,8,8,
+8,8,8,8,8,8,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,8,8,
+8,8,8,8,8,8,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,8,8,
+8,8,8,8,8,8,8,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,2,8,
+8,8,8,8,8,8,2,2,2,2,3,3,3,3,3,3,3,2,2,2,2,2,2,8,
+8,8,8,8,8,8,2,2,2,2,2,2,3,3,3,3,3,2,2,2,5,2,2,8,
+8,8,8,8,8,8,2,2,2,2,2,2,2,3,3,3,2,2,2,5,5,2,2,8,
+8,8,8,8,8,8,2,2,2,2,5,2,2,2,3,3,2,2,2,5,5,2,2,2,
+8,8,8,8,8,8,2,2,5,5,5,2,2,2,3,2,2,2,5,5,5,2,2,8,
+8,8,8,8,8,8,2,2,2,5,5,5,2,2,2,3,2,2,5,5,5,2,2,2,
+8,8,8,8,8,8,2,2,5,5,5,5,2,2,3,2,2,5,5,5,2,2,2,8,
+8,8,8,8,8,8,8,2,2,5,5,5,5,2,2,3,2,2,5,5,5,2,2,8,
+8,8,8,8,8,8,2,2,2,5,5,5,2,2,3,3,2,5,5,5,2,2,8,8,
+8,8,8,8,8,8,8,2,2,2,5,5,5,2,2,3,2,2,5,5,2,2,8,8,
+8,8,8,8,8,8,8,8,2,2,5,5,5,2,2,3,2,2,2,2,2,8,8,8,
+8,8,8,8,8,8,8,8,8,2,2,2,2,2,2,2,3,2,2,2,2,2,8,8,
+8,8,8,8,8,8,8,8,8,2,2,2,2,2,2,3,2,2,2,2,2,8,8,8,
+8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,2,3,2,2,2,2,2,8,8,
+8,8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,3,5,5,2,2,2,8,8,
+8,8,8,8,8,8,8,8,8,8,8,8,2,2,5,5,8,2,5,2,2,2,2,8,
+8,8,8,8,8,8,8,8,8,8,8,2,2,2,5,2,8,2,2,2,2,2,2,8,
+8,8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,8,8,2,2,2,2,2,2,
+8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,8,8,8,2,2,2,2,2,2,
+8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,2,8,8,8,2,2,2,2,2,
+8,8,8,8,8,8,8,8,8,8,2,2,2,2,2,8,8,8,8,2,2,2,2,2
+</data>
+ </layer>
+ <objectgroup id="9" name="goal_transport">
+  <object id="79" x="527.5" y="1122.5">
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="11" name="capture_points">
+  <object id="76" x="404" y="1115.5">
+   <point/>
+  </object>
+  <object id="78" x="649.5" y="1167">
+   <properties>
+    <property name="income" value="100"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="80" x="766" y="1294.67">
+   <properties>
+    <property name="income" value="100"/>
+    <property name="owner" value="player"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="81" x="354.667" y="1292.67">
+   <properties>
+    <property name="income" value="100"/>
+    <property name="owner" value="player"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="8" name="spawn_enemy" opacity="0.9">
+  <object id="33" x="555.333" y="451.333">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="34" x="500" y="451.333">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="35" x="432" y="452">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="36" x="367.333" y="452">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="37" x="321.333" y="477.333">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="38" x="288" y="521.333">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="39" x="243.333" y="546">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="63" x="583.333" y="1004.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="64" x="611.333" y="1004">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="65" x="638" y="1003.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="66" x="320.667" y="1003.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="67" x="353.333" y="1008.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="68" x="385.333" y="1002.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="69" x="483.333" y="1192">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="70" x="591.333" y="1169.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="7" name="spawn_player">
+  <object id="40" x="351.333" y="1242.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="41" x="390.667" y="1241.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="42" x="414.667" y="1242">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="43" x="444" y="1241.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="44" x="480.667" y="1239.33">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="46" x="609.999" y="1248.01">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="47" x="649.333" y="1246.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="48" x="673.333" y="1247.34">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="49" x="702.666" y="1246.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="50" x="739.333" y="1244.67">
+   <properties>
+    <property name="unit_class" value="infantry"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="53" x="722" y="1268">
+   <properties>
+    <property name="unit_class" value="transport"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="56" x="687.333" y="1270">
+   <properties>
+    <property name="unit_class" value="transport"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="57" x="658" y="1270">
+   <properties>
+    <property name="unit_class" value="artillery"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="58" x="629.333" y="1269.33">
+   <properties>
+    <property name="unit_class" value="artillery"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="59" x="500" y="1268.67">
+   <properties>
+    <property name="unit_class" value="artillery"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="60" x="465.333" y="1268">
+   <properties>
+    <property name="unit_class" value="artillery"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="61" x="433.333" y="1271.33">
+   <properties>
+    <property name="unit_class" value="transport"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="62" x="402" y="1272.67">
+   <properties>
+    <property name="unit_class" value="transport"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="74" x="372.667" y="1266">
+   <properties>
+    <property name="unit_class" value="tank"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="75" x="733" y="1198">
+   <properties>
+    <property name="unit_class" value="tank"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="10" name="camera_start">
+  <object id="71" x="558" y="1262.67">
+   <point/>
+  </object>
+ </objectgroup>
+</map>

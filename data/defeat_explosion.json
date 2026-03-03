@@ -1,0 +1,21 @@
+{
+	"id": "defeat_explosion",
+	"trigger": "on_enemy_defeat",
+	"vfx": {
+		"offset": [0, 1.0, 0],
+		"scale": 1.0,
+		"lifetime_sec": 1.8,
+		"particle_count": 56,
+		"particle_speed_min": 70.0,
+		"particle_speed_max": 220.0
+	},
+	"sfx": {
+		"cue": "SE_Explosion_01",
+		"volume": 0.9
+	},
+	"timing": {
+		"hit_stop_ms": 60,
+		"hide_enemy_at_ms": 80,
+		"destroy_enemy_at_ms": 1200
+	}
+}

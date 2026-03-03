@@ -1,0 +1,67 @@
+{
+	"battle_scene": "res://scenes/battle/battle_scene.tscn",
+	"audio": {
+		"intermission": "",
+		"victory": "",
+		"defeat": "",
+		"complete": "",
+		"battle": {
+			"player_turn": "",
+			"enemy_turn": ""
+		}
+	},
+	"event_after_defeat": {
+		"image": "",
+		"text": [
+			"戦線は押し切られた。",
+			"作戦を見直して再挑戦しよう。"
+		],
+		"title": "ステージ1: 敗北"
+	},
+	"event_after_victory": {
+		"image": "",
+		"text": [
+			"戦場の主導権を確保した。",
+			"次のステージへ進もう。"
+		],
+		"title": "ステージ1: 勝利"
+	},
+	"event_before": {
+		"image": "",
+		"text": [
+			"思考戦域で最初の衝突が始まる。",
+			"有利な位置を確保して敵の勢いを断て。"
+		],
+		"title": "ステージ1: ブリーフィング"
+	},
+	"id": "stage_01",
+	"map": {
+		"background_image": "res://data/tiled/src/bgimage/stage01.png",
+		"cols": 24,
+		"rows": 54
+	},
+	"name": "開幕戦",
+	"prep_text": "ユニット状態を確認し、作戦を開始してください。",
+	"transport_goal": {
+		"tile": [12, 26],
+		"faction": "player",
+		"unit_class": "transport",
+		"score": 100,
+		"victory_score": 300
+	},
+	"tiled_map": {
+		"default_terrain": "plain",
+		"gid_terrain": {
+			"1": "none",
+			"2": "plain",
+			"3": "basin",
+			"4": "forest",
+			"5": "hill",
+			"6": "peak",
+			"7": "water",
+			"8": "abyss"
+		},
+		"path": "res://data/tiled/export/stage01.tmj",
+		"terrain_layer": "地面"
+	}
+}
