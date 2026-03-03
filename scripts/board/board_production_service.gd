@@ -122,8 +122,11 @@ static func request_ai_production_turn(board: HexBoard, faction: String) -> Dict
 static func collect_ai_candidates(board: HexBoard, faction: String) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var affordable_classes: Array[String] = []
+	var allowed_classes := _allowed_ai_classes_by_faction(board, faction)
 	var mp := board.query_faction_mp(faction)
 	for unit_class in board.get_unit_catalog_classes():
+		if not allowed_classes.is_empty() and not allowed_classes.has(unit_class):
+			continue
 		var entry := board.get_unit_catalog_entry(unit_class)
 		if entry.is_empty():
 			continue
@@ -147,6 +150,21 @@ static func collect_ai_candidates(board: HexBoard, faction: String) -> Array[Dic
 				"tile": tile,
 				"unit_class": unit_class
 			})
+	return result
+
+static func _allowed_ai_classes_by_faction(board: HexBoard, faction: String) -> Array[String]:
+	if board == null:
+		return []
+	if not board.has_method("query_ai_production_allowed_classes"):
+		return []
+	var classes_variant: Variant = board.query_ai_production_allowed_classes(faction)
+	if not (classes_variant is Array):
+		return []
+	var result: Array[String] = []
+	for item in (classes_variant as Array):
+		var unit_class := str(item).strip_edges().to_lower()
+		if unit_class != "":
+			result.append(unit_class)
 	return result
 
 static func _next_production_unit_id(board: HexBoard, faction: String, unit_class: String) -> String:

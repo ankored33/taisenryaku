@@ -119,6 +119,7 @@ var deployment_active := false
 var deployment_faction := "player"
 var deployment_selected_unit_class := ""
 var turn_limit := DEFAULT_TURN_LIMIT
+var ai_production_allowed_classes := {}
 
 func _ready() -> void:
 	_ensure_hex_tileset()
@@ -236,6 +237,27 @@ func apply_stage_turn_limit(stage_data: Dictionary) -> void:
 	var limit_variant: Variant = stage_data.get("turn_limit", DEFAULT_TURN_LIMIT)
 	turn_limit = maxi(1, int(limit_variant))
 	_update_turn_label()
+
+func apply_stage_ai_production(stage_data: Dictionary) -> void:
+	ai_production_allowed_classes.clear()
+	var production_variant: Variant = stage_data.get("ai_production", {})
+	if not (production_variant is Dictionary):
+		return
+	var production := production_variant as Dictionary
+	var classes_variant: Variant = production.get("enemy", [])
+	if not (classes_variant is Array):
+		return
+	var normalized: Array[String] = []
+	var seen := {}
+	for class_variant in (classes_variant as Array):
+		var unit_class := str(class_variant).strip_edges().to_lower()
+		if unit_class == "":
+			continue
+		if seen.has(unit_class):
+			continue
+		seen[unit_class] = true
+		normalized.append(unit_class)
+	ai_production_allowed_classes["enemy"] = normalized
 
 func apply_capture_points_from_stage(stage_data: Dictionary) -> void:
 	BoardCaptureService.apply_capture_points_from_stage(self, stage_data)
@@ -850,6 +872,22 @@ func query_unit_vision(unit: Dictionary) -> int:
 func query_faction_mp(faction: String) -> int:
 	var key := faction.strip_edges().to_lower()
 	return int(faction_mp.get(key, 0))
+
+func query_ai_production_allowed_classes(faction: String) -> Array[String]:
+	var key := faction.strip_edges().to_lower()
+	if key == "":
+		return []
+	if not ai_production_allowed_classes.has(key):
+		return []
+	var classes_variant: Variant = ai_production_allowed_classes.get(key, [])
+	if not (classes_variant is Array):
+		return []
+	var result: Array[String] = []
+	for item in (classes_variant as Array):
+		var unit_class := str(item).strip_edges().to_lower()
+		if unit_class != "":
+			result.append(unit_class)
+	return result
 
 func query_capture_income_for_faction(faction: String) -> int:
 	return _capture_income_for_faction(faction)

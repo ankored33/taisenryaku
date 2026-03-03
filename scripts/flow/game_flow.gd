@@ -223,6 +223,27 @@ func update_current_stage_audio(audio_config: Dictionary) -> bool:
 	_play_phase_bgm(current_phase)
 	return true
 
+func update_current_stage_enemy_ai_production(unit_classes: Array, enabled: bool = true) -> bool:
+	if current_stage_source_path == "":
+		return false
+	var normalized := _normalize_unit_class_list(unit_classes)
+	var ai_variant: Variant = current_stage_source_data.get("ai_production", {})
+	var ai_production := ai_variant as Dictionary if ai_variant is Dictionary else {}
+	if not enabled:
+		ai_production.erase("enemy")
+	else:
+		ai_production["enemy"] = normalized
+	if ai_production.is_empty():
+		current_stage_source_data.erase("ai_production")
+	else:
+		current_stage_source_data["ai_production"] = ai_production
+	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
+	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
+	return true
+
 func _change_phase(next_phase: String) -> void:
 	current_phase = next_phase
 	_play_phase_bgm(next_phase)
@@ -504,3 +525,16 @@ func _normalize_audio_config(audio_variant: Variant) -> Dictionary:
 			"enemy_turn": str(battle_src.get("enemy_turn", ""))
 		}
 	}
+
+func _normalize_unit_class_list(raw: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if not (raw is Array):
+		return result
+	var seen := {}
+	for item in (raw as Array):
+		var unit_class := str(item).strip_edges().to_lower()
+		if unit_class == "" or seen.has(unit_class):
+			continue
+		seen[unit_class] = true
+		result.append(unit_class)
+	return result

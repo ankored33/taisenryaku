@@ -51,6 +51,8 @@ const MOVED_MARKER_OFFSET_FACTOR := Vector2(0.40, 0.25)
 @onready var fog_debug_button: Button = get_node_or_null("CanvasLayer/FogDebugButton") as Button
 @onready var unit_param_editor_button: Button = get_node_or_null("CanvasLayer/UnitParamEditorButton") as Button
 @onready var unit_param_editor_dialog: AcceptDialog = get_node_or_null("CanvasLayer/UnitParamEditorDialog") as AcceptDialog
+@onready var enemy_ai_production_editor_button: Button = get_node_or_null("CanvasLayer/EnemyAIProductionEditorButton") as Button
+@onready var enemy_ai_production_editor_dialog: AcceptDialog = get_node_or_null("CanvasLayer/EnemyAIProductionEditorDialog") as AcceptDialog
 @onready var unit_hp_overlay_layer: Control = get_node_or_null("CanvasLayer/UnitHpOverlayLayer") as Control
 
 var board_anchor := Vector2.ZERO
@@ -71,6 +73,8 @@ var unit_param_controls := {}
 var unit_param_class_select: OptionButton
 var unit_param_new_class_input: LineEdit
 var unit_param_tiled_hint: TextEdit
+var enemy_ai_production_checks := {}
+var enemy_ai_production_enable_check: CheckBox
 var unit_hp_labels := {}
 var unit_moved_markers := {}
 var defeat_effect_config := {}
@@ -89,7 +93,8 @@ func _ready() -> void:
 		"terrain_color_editor",
 		"fog_debug",
 		"bgm_editor",
-		"unit_param_editor"
+		"unit_param_editor",
+		"enemy_ai_production_editor"
 	])
 	_ensure_tile_info_label()
 	_configure_left_panel_layout()
@@ -135,6 +140,7 @@ func _ready() -> void:
 	_ensure_fog_debug_button()
 	_ensure_bgm_editor()
 	_ensure_unit_param_editor()
+	_ensure_enemy_ai_production_editor()
 	board.load_units("res://data/units.json")
 	var stage_data: Dictionary = {}
 	if has_node("/root/GameFlow") and board.has_method("apply_stage_unit_spawns"):
@@ -146,6 +152,8 @@ func _ready() -> void:
 		board.apply_stage_resources(stage_data)
 	if board.has_method("apply_stage_turn_limit"):
 		board.apply_stage_turn_limit(stage_data)
+	if board.has_method("apply_stage_ai_production"):
+		board.apply_stage_ai_production(stage_data)
 	if board.has_method("apply_transport_goal_from_stage"):
 		board.apply_transport_goal_from_stage(stage_data)
 	_apply_transport_goal_victory_score(stage_data)
@@ -935,6 +943,203 @@ func _ensure_unit_param_editor() -> void:
 func _layout_unit_param_editor_button() -> void:
 	if hud_controller != null:
 		hud_controller.layout_buttons()
+
+func _ensure_enemy_ai_production_editor() -> void:
+	if hud_controller != null:
+		enemy_ai_production_editor_button = hud_controller.ensure_button(
+			"enemy_ai_production_editor",
+			"EnemyAIProductionEditorButton",
+			"敵生産AI",
+			Vector2(120.0, 34.0),
+			Callable(self, "_on_open_enemy_ai_production_editor_pressed")
+		)
+	_layout_enemy_ai_production_editor_button()
+
+	if enemy_ai_production_editor_dialog == null:
+		enemy_ai_production_editor_dialog = AcceptDialog.new()
+		enemy_ai_production_editor_dialog.name = "EnemyAIProductionEditorDialog"
+		enemy_ai_production_editor_dialog.title = "敵AI生産ユニット"
+		enemy_ai_production_editor_dialog.dialog_text = ""
+		$CanvasLayer.add_child(enemy_ai_production_editor_dialog)
+		enemy_ai_production_editor_dialog.confirmed.connect(_on_enemy_ai_production_editor_confirmed)
+	if enemy_ai_production_editor_dialog != null:
+		var ok_button := enemy_ai_production_editor_dialog.get_ok_button()
+		if ok_button != null:
+			ok_button.text = "保存"
+
+	var existing := enemy_ai_production_editor_dialog.get_node_or_null("Root")
+	if existing != null:
+		return
+
+	var root := VBoxContainer.new()
+	root.name = "Root"
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_theme_constant_override("separation", 6)
+	enemy_ai_production_editor_dialog.add_child(root)
+
+	var help := Label.new()
+	help.text = "敵AIの生産候補をステージごとに指定します。"
+	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(help)
+
+	enemy_ai_production_enable_check = CheckBox.new()
+	enemy_ai_production_enable_check.name = "EnableLimitCheck"
+	enemy_ai_production_enable_check.text = "このステージで敵生産を制限する"
+	enemy_ai_production_enable_check.toggled.connect(_on_enemy_ai_production_enable_toggled)
+	root.add_child(enemy_ai_production_enable_check)
+
+	var actions := HBoxContainer.new()
+	actions.name = "Actions"
+	actions.add_theme_constant_override("separation", 8)
+	root.add_child(actions)
+
+	var all_on := Button.new()
+	all_on.text = "全選択"
+	all_on.pressed.connect(_on_enemy_ai_production_select_all_pressed)
+	actions.add_child(all_on)
+
+	var all_off := Button.new()
+	all_off.text = "全解除"
+	all_off.pressed.connect(_on_enemy_ai_production_clear_all_pressed)
+	actions.add_child(all_off)
+
+	var scroll := ScrollContainer.new()
+	scroll.name = "ClassScroll"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(420.0, 260.0)
+	root.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.name = "ClassList"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 2)
+	scroll.add_child(list)
+
+func _layout_enemy_ai_production_editor_button() -> void:
+	if hud_controller != null:
+		hud_controller.layout_buttons()
+
+func _on_open_enemy_ai_production_editor_pressed() -> void:
+	_refresh_enemy_ai_production_editor()
+	if enemy_ai_production_editor_dialog != null:
+		enemy_ai_production_editor_dialog.popup_centered(Vector2i(520, 520))
+
+func _refresh_enemy_ai_production_editor() -> void:
+	var class_list := _enemy_ai_production_class_list()
+	if class_list == null:
+		return
+	for child in class_list.get_children():
+		child.queue_free()
+	enemy_ai_production_checks.clear()
+
+	var classes: Array[String] = []
+	if board != null and board.has_method("get_unit_catalog_classes"):
+		classes = board.get_unit_catalog_classes()
+	classes.sort()
+
+	for unit_class in classes:
+		var check := CheckBox.new()
+		check.text = unit_class
+		class_list.add_child(check)
+		enemy_ai_production_checks[unit_class] = check
+
+	var cfg := _current_stage_enemy_ai_production_config()
+	var enabled := bool(cfg.get("enabled", false))
+	var allowed := _normalize_unit_class_list(cfg.get("classes", []))
+	if enemy_ai_production_enable_check != null:
+		enemy_ai_production_enable_check.button_pressed = enabled
+	for unit_class in enemy_ai_production_checks.keys():
+		var check_variant: Variant = enemy_ai_production_checks[unit_class]
+		if not (check_variant is CheckBox):
+			continue
+		var check := check_variant as CheckBox
+		check.button_pressed = allowed.has(str(unit_class))
+	_update_enemy_ai_production_check_editability()
+
+func _enemy_ai_production_class_list() -> VBoxContainer:
+	if enemy_ai_production_editor_dialog == null:
+		return null
+	var node := enemy_ai_production_editor_dialog.get_node_or_null("Root/ClassScroll/ClassList")
+	return node as VBoxContainer if node is VBoxContainer else null
+
+func _current_stage_enemy_ai_production_config() -> Dictionary:
+	var stage_variant: Variant = GameFlow.get_current_stage_data() if has_node("/root/GameFlow") else {}
+	if not (stage_variant is Dictionary):
+		return {"enabled": false, "classes": []}
+	var stage := stage_variant as Dictionary
+	var ai_variant: Variant = stage.get("ai_production", {})
+	if not (ai_variant is Dictionary):
+		return {"enabled": false, "classes": []}
+	var ai_production := ai_variant as Dictionary
+	if not ai_production.has("enemy"):
+		return {"enabled": false, "classes": []}
+	var classes := _normalize_unit_class_list(ai_production.get("enemy", []))
+	return {"enabled": true, "classes": classes}
+
+func _normalize_unit_class_list(raw: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if not (raw is Array):
+		return result
+	var seen := {}
+	for item in (raw as Array):
+		var unit_class := str(item).strip_edges().to_lower()
+		if unit_class == "" or seen.has(unit_class):
+			continue
+		seen[unit_class] = true
+		result.append(unit_class)
+	return result
+
+func _on_enemy_ai_production_enable_toggled(_pressed: bool) -> void:
+	_update_enemy_ai_production_check_editability()
+
+func _update_enemy_ai_production_check_editability() -> void:
+	var enabled := enemy_ai_production_enable_check != null and enemy_ai_production_enable_check.button_pressed
+	for check_variant in enemy_ai_production_checks.values():
+		if check_variant is CheckBox:
+			(check_variant as CheckBox).disabled = not enabled
+
+func _on_enemy_ai_production_select_all_pressed() -> void:
+	var enabled := enemy_ai_production_enable_check != null and enemy_ai_production_enable_check.button_pressed
+	if not enabled:
+		return
+	for check_variant in enemy_ai_production_checks.values():
+		if check_variant is CheckBox:
+			(check_variant as CheckBox).button_pressed = true
+
+func _on_enemy_ai_production_clear_all_pressed() -> void:
+	var enabled := enemy_ai_production_enable_check != null and enemy_ai_production_enable_check.button_pressed
+	if not enabled:
+		return
+	for check_variant in enemy_ai_production_checks.values():
+		if check_variant is CheckBox:
+			(check_variant as CheckBox).button_pressed = false
+
+func _on_enemy_ai_production_editor_confirmed() -> void:
+	if not has_node("/root/GameFlow") or not GameFlow.has_method("update_current_stage_enemy_ai_production"):
+		if board != null and board.has_method("cmd_update_status"):
+			board.cmd_update_status("ステージ保存APIが見つからないため、敵生産AI設定を保存できません。")
+		return
+	var enabled := enemy_ai_production_enable_check != null and enemy_ai_production_enable_check.button_pressed
+	var selected: Array[String] = []
+	if enabled:
+		for key in enemy_ai_production_checks.keys():
+			var check_variant: Variant = enemy_ai_production_checks[key]
+			if check_variant is CheckBox and bool((check_variant as CheckBox).button_pressed):
+				selected.append(str(key))
+	selected.sort()
+	var ok := bool(GameFlow.update_current_stage_enemy_ai_production(selected, enabled))
+	if not ok:
+		if board != null and board.has_method("cmd_update_status"):
+			board.cmd_update_status("敵生産AI設定の保存に失敗しました。")
+		return
+	if board != null and board.has_method("apply_stage_ai_production"):
+		var stage_variant: Variant = GameFlow.get_current_stage_data()
+		if stage_variant is Dictionary:
+			board.apply_stage_ai_production(stage_variant as Dictionary)
+	if board != null and board.has_method("cmd_update_status"):
+		board.cmd_update_status("敵生産AI設定を保存しました。")
 
 func _add_unit_param_spin(parent: GridContainer, key: String, label_text: String, is_text: bool = false) -> void:
 	var label := Label.new()
