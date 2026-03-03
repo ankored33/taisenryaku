@@ -1,2 +1,13 @@
 # Godot 4+ specific ignores
 .godot/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
