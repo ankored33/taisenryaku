@@ -39,9 +39,6 @@ static func clear_unit_info(board: HexBoard) -> void:
 static func update_tile_info(board: HexBoard, tile: Vector2i) -> void:
 	if board.tile_info_label == null:
 		return
-	if not board.query_is_tile_visible_to_player(tile):
-		board.tile_info_label.text = "カーソル: (%d, %d)\n地形: ???\n移動コスト: ???" % [tile.x, tile.y]
-		return
 	var terrain := board.query_terrain_type(tile)
 	var move_text := "通行不可" if board.query_is_terrain_impassable(terrain) else str(board._movement_cost_for_tile(tile))
 	var text := "カーソル: (%d, %d)\n地形: %s\n移動コスト: %s" % [tile.x, tile.y, terrain, move_text]

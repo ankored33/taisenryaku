@@ -50,23 +50,6 @@ static func compute_visible_tiles_for_faction(board: HexBoard, units: Array[Dict
 
 static func recompute_visibility_on_board(board: HexBoard) -> void:
 	board.visible_tiles_by_faction = recompute_visibility(board, board.units, FOG_VIEWER_FACTION)
-	for faction_key in board.visible_tiles_by_faction.keys():
-		var faction := str(faction_key).strip_edges().to_lower()
-		if faction == "":
-			continue
-		var visible_for_faction: Variant = board.visible_tiles_by_faction.get(faction_key, {})
-		if not (visible_for_faction is Dictionary):
-			continue
-		var visible_dict: Dictionary = visible_for_faction as Dictionary
-		if not board.explored_tiles_by_faction.has(faction):
-			board.explored_tiles_by_faction[faction] = {}
-		var explored_variant: Variant = board.explored_tiles_by_faction.get(faction, {})
-		if not (explored_variant is Dictionary):
-			board.explored_tiles_by_faction[faction] = {}
-			explored_variant = board.explored_tiles_by_faction[faction]
-		var explored := explored_variant as Dictionary
-		for tile in visible_dict.keys():
-			explored[tile] = true
 
 static func visible_tiles_for_faction(board: HexBoard, faction: String) -> Dictionary:
 	var key := faction.strip_edges().to_lower()
@@ -89,26 +72,13 @@ static func is_tile_visible_to_player(board: HexBoard, tile: Vector2i) -> bool:
 static func is_tile_explored_for_faction(board: HexBoard, tile: Vector2i, faction: String) -> bool:
 	if not board.query_is_valid_hex(tile):
 		return false
-	if is_tile_visible_for_faction(board, tile, faction):
-		return true
-	var key := faction.strip_edges().to_lower()
-	if not board.explored_tiles_by_faction.has(key):
-		return false
-	var explored_variant: Variant = board.explored_tiles_by_faction.get(key, {})
-	if not (explored_variant is Dictionary):
-		return false
-	return (explored_variant as Dictionary).has(tile)
+	return true
 
 static func explored_tile_count_for_faction(board: HexBoard, faction: String) -> int:
 	var key := faction.strip_edges().to_lower()
 	if key == "":
 		return 0
-	if not board.explored_tiles_by_faction.has(key):
-		return 0
-	var explored_variant: Variant = board.explored_tiles_by_faction.get(key, {})
-	if not (explored_variant is Dictionary):
-		return 0
-	return (explored_variant as Dictionary).size()
+	return maxi(0, int(board.cols) * int(board.rows))
 
 static func is_tile_explored_to_player(board: HexBoard, tile: Vector2i) -> bool:
 	if board.debug_reveal_all:

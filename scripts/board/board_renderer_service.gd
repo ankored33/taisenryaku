@@ -32,8 +32,6 @@ const TERRAIN_FILL_ALPHA_BASE := 0.20
 const TERRAIN_FILL_ALPHA_REACHABLE := 0.26
 const TERRAIN_FILL_ALPHA_ATTACKABLE := 0.30
 const TERRAIN_FILL_ALPHA_HOVER := 0.36
-const FOG_FILL_COLOR := Color(0.01, 0.01, 0.02, 0.95)
-const FOG_STROKE_COLOR := Color(0.10, 0.10, 0.14, 0.28)
 const FOG_DIM_FILL_COLOR := Color(0.02, 0.02, 0.03, 0.42)
 const FOG_DIM_STROKE_COLOR := Color(0.12, 0.12, 0.16, 0.20)
 
@@ -43,10 +41,6 @@ static func draw(board: HexBoard) -> void:
 	for r in board.rows:
 		for q in board.cols:
 			var tile = Vector2i(q, r)
-			var is_explored := board.query_is_tile_explored_to_player(tile)
-			if not is_explored:
-				_draw_hex(board, q, r, FOG_FILL_COLOR, FOG_STROKE_COLOR, GRID_STROKE_WIDTH)
-				continue
 			var is_visible := board.query_is_tile_visible_to_player(tile)
 			var terrain := board.query_terrain_type(tile)
 			var base_color: Color = board.query_terrain_base_color(terrain)
@@ -217,8 +211,6 @@ static func _draw_hovered_capture_heal_range(board: HexBoard) -> void:
 		for q in board.cols:
 			var tile := Vector2i(q, r)
 			if board.query_hex_distance(hover, tile) > heal_range:
-				continue
-			if not board.query_is_tile_explored_to_player(tile):
 				continue
 			var fill_alpha := CAPTURE_RANGE_FILL_ALPHA
 			var stroke_alpha := CAPTURE_RANGE_STROKE_ALPHA

@@ -18,6 +18,7 @@ const BoardDeploymentService = preload("res://scripts/board/board_deployment_ser
 const BoardAITurnService = preload("res://scripts/board/board_ai_turn_service.gd")
 const BoardUIService = preload("res://scripts/board/board_ui_service.gd")
 const HexGridService = preload("res://scripts/board/hex_grid_service.gd")
+const BoardRuntimeState = preload("res://scripts/board/board_runtime_state.gd")
 
 const TERRAIN_MOVE_COST := {
 	"plain": 1,
@@ -73,13 +74,22 @@ var turn_start_handler: Callable
 var pending_attack_attacker_idx := -1
 var pending_attack_defender_idx := -1
 var pending_attack_distance := -1
-var pending_production_tile := Vector2i(-1, -1)
+var runtime_state := BoardRuntimeState.new(
+	DEFAULT_INITIAL_PLAYER_MP,
+	DEFAULT_INITIAL_ENEMY_MP,
+	DEFAULT_TURN_LIMIT
+)
+var pending_production_tile: Vector2i:
+	get:
+		return runtime_state.pending_production_tile
+	set(value):
+		runtime_state.pending_production_tile = value
 var pending_move_cancel_unit_id := ""
 var last_move_unit_id := ""
 var last_move_from := Vector2i.ZERO
 var last_move_to := Vector2i.ZERO
 var last_move_action_sequence := -1
-var last_move_revealed_new_vision := false
+var last_move_revealed_new_enemy := false
 var action_sequence := 0
 var ai_faction := "enemy"
 var is_ai_running := false
@@ -88,15 +98,21 @@ var is_turn_start_pause := false
 var unit_action_mode := ""
 var hovered_tile := Vector2i(-1, -1)
 var unplaced_unit_ids: Array[String] = []
-var battle_score := 0
-var faction_mp := {
-	"player": DEFAULT_INITIAL_PLAYER_MP,
-	"enemy": DEFAULT_INITIAL_ENEMY_MP
-}
-var faction_initial_mp := {
-	"player": DEFAULT_INITIAL_PLAYER_MP,
-	"enemy": DEFAULT_INITIAL_ENEMY_MP
-}
+var battle_score: int:
+	get:
+		return runtime_state.battle_score
+	set(value):
+		runtime_state.battle_score = value
+var faction_mp: Dictionary:
+	get:
+		return runtime_state.faction_mp
+	set(value):
+		runtime_state.faction_mp = value
+var faction_initial_mp: Dictionary:
+	get:
+		return runtime_state.faction_initial_mp
+	set(value):
+		runtime_state.faction_initial_mp = value
 var transport_goal_enabled := false
 var transport_goal_tile := Vector2i(-1, -1)
 var transport_goal_target_faction := "player"
@@ -115,11 +131,31 @@ var explored_tiles_by_faction := {}
 var debug_reveal_all := false
 var unit_icon_cache := {}
 var units_json_path := ""
-var deployment_active := false
-var deployment_faction := "player"
-var deployment_selected_unit_class := ""
-var turn_limit := DEFAULT_TURN_LIMIT
-var ai_production_allowed_classes := {}
+var deployment_active: bool:
+	get:
+		return runtime_state.deployment_active
+	set(value):
+		runtime_state.deployment_active = value
+var deployment_faction: String:
+	get:
+		return runtime_state.deployment_faction
+	set(value):
+		runtime_state.deployment_faction = value
+var deployment_selected_unit_class: String:
+	get:
+		return runtime_state.deployment_selected_unit_class
+	set(value):
+		runtime_state.deployment_selected_unit_class = value
+var turn_limit: int:
+	get:
+		return runtime_state.turn_limit
+	set(value):
+		runtime_state.turn_limit = value
+var ai_production_allowed_classes: Dictionary:
+	get:
+		return runtime_state.ai_production_allowed_classes
+	set(value):
+		runtime_state.ai_production_allowed_classes = value
 
 func _ready() -> void:
 	_ensure_hex_tileset()
@@ -583,35 +619,39 @@ func cmd_start_move_animation(unit_id: String, from_tile: Vector2i, to_tile: Vec
 func cmd_move_unit_to(unit_idx: int, target_tile: Vector2i) -> void:
 	_move_unit_to(unit_idx, target_tile)
 
-func cmd_set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_vision: bool = false) -> void:
-	_set_last_move_record(unit_id, start_pos, end_pos, revealed_new_vision)
+func cmd_set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_enemy: bool = false) -> void:
+	_set_last_move_record(unit_id, start_pos, end_pos, revealed_new_enemy)
 
 func cmd_try_award_transport_goal(unit_idx: int) -> bool:
 	return _try_award_transport_goal(unit_idx)
 
 func cmd_execute_unit_move(unit_idx: int, target_tile: Vector2i) -> Dictionary:
 	if unit_idx < 0 or unit_idx >= units.size():
-		return {"moved": false, "awarded": false, "revealed_new_vision": false}
+		return {"moved": false, "awarded": false, "revealed_new_enemy": false}
 	var start_tile := _to_vec2i(units[unit_idx].get(UnitState.POS, Vector2i.ZERO))
 	if start_tile == target_tile:
-		return {"moved": false, "awarded": false, "revealed_new_vision": false}
+		return {"moved": false, "awarded": false, "revealed_new_enemy": false}
 	var moved_unit_id := str(units[unit_idx].get(UnitState.ID, ""))
 	var faction := str(units[unit_idx].get(UnitState.FACTION, ""))
-	var explored_before := BoardVisibilityService.explored_tile_count_for_faction(self, faction)
+	var visible_enemy_before := _visible_enemy_id_set_for_faction(faction)
 	_start_move_animation(moved_unit_id, start_tile, target_tile)
 	_move_unit_to(unit_idx, target_tile)
 	units[unit_idx][UnitState.MOVED] = true
 	action_sequence += 1
-	var explored_after := BoardVisibilityService.explored_tile_count_for_faction(self, faction)
-	var revealed_new_vision := explored_after > explored_before
-	_set_last_move_record(moved_unit_id, start_tile, target_tile, revealed_new_vision)
+	var visible_enemy_after := _visible_enemy_id_set_for_faction(faction)
+	var revealed_new_enemy := false
+	for enemy_id in visible_enemy_after.keys():
+		if not visible_enemy_before.has(enemy_id):
+			revealed_new_enemy = true
+			break
+	_set_last_move_record(moved_unit_id, start_tile, target_tile, revealed_new_enemy)
 	_clear_pending_move_cancel()
 	var awarded := _try_award_transport_goal(unit_idx)
 	queue_redraw()
 	return {
 		"moved": true,
 		"awarded": awarded,
-		"revealed_new_vision": revealed_new_vision
+		"revealed_new_enemy": revealed_new_enemy
 	}
 
 func cmd_clear_pending_move_cancel() -> void:
@@ -1057,7 +1097,7 @@ func _can_offer_move_cancel(unit_idx: int) -> bool:
 		return false
 	if _to_vec2i(unit.get(UnitState.POS, Vector2i.ZERO)) != last_move_to:
 		return false
-	if last_move_revealed_new_vision:
+	if last_move_revealed_new_enemy:
 		return false
 	return true
 
@@ -1075,19 +1115,38 @@ func _has_pending_move_cancel() -> bool:
 func _clear_pending_move_cancel() -> void:
 	pending_move_cancel_unit_id = ""
 
-func _set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_vision: bool = false) -> void:
+func _set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_enemy: bool = false) -> void:
 	last_move_unit_id = unit_id
 	last_move_from = start_pos
 	last_move_to = end_pos
 	last_move_action_sequence = action_sequence
-	last_move_revealed_new_vision = revealed_new_vision
+	last_move_revealed_new_enemy = revealed_new_enemy
 
 func _clear_last_move_record() -> void:
 	last_move_unit_id = ""
 	last_move_from = Vector2i.ZERO
 	last_move_to = Vector2i.ZERO
 	last_move_action_sequence = -1
-	last_move_revealed_new_vision = false
+	last_move_revealed_new_enemy = false
+
+func _visible_enemy_id_set_for_faction(faction: String) -> Dictionary:
+	var key := faction.strip_edges().to_lower()
+	if key == "":
+		return {}
+	var visible := BoardVisibilityService.visible_tiles_for_faction(self, key)
+	var result := {}
+	for i in units.size():
+		var unit := units[i]
+		if str(unit.get(UnitState.FACTION, "")).strip_edges().to_lower() == key:
+			continue
+		var tile := _to_vec2i(unit.get(UnitState.POS, Vector2i(-1, -1)))
+		if not visible.has(tile):
+			continue
+		var unit_id := str(unit.get(UnitState.ID, ""))
+		if unit_id == "":
+			unit_id = "idx_%d" % i
+		result[unit_id] = true
+	return result
 
 func _unit_index_by_id(unit_id: String) -> int:
 	if unit_id == "":
