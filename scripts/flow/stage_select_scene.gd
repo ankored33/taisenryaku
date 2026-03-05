@@ -73,6 +73,12 @@ func _refresh_view() -> void:
 		edit_button.disabled = not exists
 		edit_button.pressed.connect(_on_stage_event_edit_pressed.bind(index))
 		row.add_child(edit_button)
+		var stage_editor_button := Button.new()
+		stage_editor_button.text = "ステージ編集"
+		stage_editor_button.custom_minimum_size = Vector2(120.0, 0.0)
+		stage_editor_button.disabled = not exists
+		stage_editor_button.pressed.connect(_on_stage_editor_pressed.bind(index))
+		row.add_child(stage_editor_button)
 		stage_list.add_child(row)
 	_update_info_label()
 
@@ -91,7 +97,7 @@ func _update_info_label() -> void:
 	if notice != "":
 		info_label.text = notice
 		return
-	info_label.text = "%s を選択中。ステージ開始または「イベント編集」を選んでください。" % GameFlow.get_selected_girl_name()
+	info_label.text = "%s を選択中。ステージ開始 / イベント編集 / ステージ編集を選んでください。" % GameFlow.get_selected_girl_name()
 
 func _on_girl_selected(index: int) -> void:
 	var girl_id := str(girl_option.get_item_metadata(index))
@@ -112,6 +118,16 @@ func _on_stage_event_edit_pressed(stage_index: int) -> void:
 		return
 	if event_editor_controller != null:
 		event_editor_controller.open()
+	_update_info_label()
+
+func _on_stage_editor_pressed(stage_index: int) -> void:
+	if not GameFlow.has_method("debug_start_stage_battle"):
+		info_label.text = "ステージ編集APIが見つかりません。"
+		return
+	var girl_id := GameFlow.get_selected_girl_id()
+	var started := bool(GameFlow.debug_start_stage_battle(girl_id, stage_index))
+	if started:
+		return
 	_update_info_label()
 
 func _current_stage_event_config(event_key: String) -> Dictionary:

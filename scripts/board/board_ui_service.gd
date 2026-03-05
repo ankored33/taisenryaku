@@ -41,7 +41,14 @@ static func update_tile_info(board: HexBoard, tile: Vector2i) -> void:
 		return
 	var terrain := board.query_terrain_type(tile)
 	var move_text := "通行不可" if board.query_is_terrain_impassable(terrain) else str(board.query_movement_cost_for_tile(tile))
-	var text := "カーソル: (%d, %d)\n地形: %s\n移動コスト: %s" % [tile.x, tile.y, terrain, move_text]
+	var effect_text := _terrain_effect_text(terrain)
+	var text := "カーソル: (%d, %d)\n地形: %s\n移動コスト: %s\n地形効果: %s" % [
+		tile.x,
+		tile.y,
+		terrain,
+		move_text,
+		effect_text
+	]
 	var capture_point := board.query_capture_point_at(tile)
 	if not capture_point.is_empty():
 		var base_name := str(capture_point.get("name", "")).strip_edges()
@@ -61,6 +68,21 @@ static func update_tile_info(board: HexBoard, tile: Vector2i) -> void:
 			board.query_turn_start_heal_base_range()
 		]
 	board.tile_info_label.text = text
+
+static func _terrain_effect_text(terrain: String) -> String:
+	var key := terrain.strip_edges().to_lower()
+	var effects: Array[String] = []
+	if key == "forest":
+		effects.append("防御+1 / 索敵-1")
+	elif key == "hill":
+		effects.append("視界+1 / 高所攻撃+1")
+	elif key == "peak":
+		effects.append("視界+2 / 高所攻撃+2")
+	elif key == "basin":
+		effects.append("防御-1(被ダメ増)")
+	if effects.is_empty():
+		return "なし"
+	return ", ".join(effects)
 
 static func clear_tile_info(board: HexBoard) -> void:
 	if board.tile_info_label == null:

@@ -143,16 +143,3 @@ value = -6.0
 [node name="SeValue" type="Label" parent="SettingsDialog/Margin/VBox/SeRow"]
 layout_mode = 2
 text = "-6.0 dB"
-
-[node name="DebugStage1Button" type="Button" parent="."]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -208.0
-offset_top = 10.0
-offset_right = -10.0
-offset_bottom = 38.0
-grow_horizontal = 0
-mouse_filter = 1
-text = "DEBUG: STAGE1配置"
-theme_override_font_sizes/font_size = 12

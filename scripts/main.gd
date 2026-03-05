@@ -75,6 +75,8 @@ func _ready() -> void:
 	camera_controller = BattleCameraController.new(CAMERA_SPEED, ZOOM_STEP, MIN_ZOOM, MAX_ZOOM, VIEW_PADDING)
 	hud_controller = BattleHudController.new($CanvasLayer, VIEW_PADDING)
 	hud_controller.set_button_order([
+		"debug_victory",
+		"debug_defeat",
 		"terrain_color_editor",
 		"fog_debug",
 		"bgm_editor",
@@ -147,10 +149,7 @@ func _ready() -> void:
 		turn_start_dialog.get_ok_button().hide()
 	if transport_goal_dialog != null:
 		transport_goal_dialog.get_ok_button().hide()
-	if debug_victory_button != null:
-		debug_victory_button.pressed.connect(_on_debug_victory_pressed)
-	if debug_defeat_button != null:
-		debug_defeat_button.pressed.connect(_on_debug_defeat_pressed)
+	_hide_left_panel_debug_buttons()
 	if unit_header_label != null:
 		unit_header_label.visible = false
 	unit_info_label.visible = false
@@ -231,6 +230,34 @@ func _setup_debug_tools_if_enabled() -> void:
 		return
 	debug_tools_controller = BattleDebugToolsController.new()
 	debug_tools_controller.setup($CanvasLayer, board, hud_controller)
+	_setup_result_debug_buttons()
+
+func _setup_result_debug_buttons() -> void:
+	if hud_controller == null:
+		return
+	hud_controller.ensure_button(
+		"debug_victory",
+		"DebugVictoryFloatingButton",
+		"勝利デバッグ",
+		Vector2(120.0, 34.0),
+		Callable(self, "_on_debug_victory_pressed")
+	)
+	hud_controller.ensure_button(
+		"debug_defeat",
+		"DebugDefeatFloatingButton",
+		"敗北デバッグ",
+		Vector2(120.0, 34.0),
+		Callable(self, "_on_debug_defeat_pressed")
+	)
+	hud_controller.layout_buttons()
+
+func _hide_left_panel_debug_buttons() -> void:
+	if debug_victory_button != null:
+		debug_victory_button.visible = false
+		debug_victory_button.disabled = true
+	if debug_defeat_button != null:
+		debug_defeat_button.visible = false
+		debug_defeat_button.disabled = true
 
 func _on_end_turn_button_pressed() -> void:
 	end_turn_confirm.popup_centered()
