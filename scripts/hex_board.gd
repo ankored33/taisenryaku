@@ -235,6 +235,11 @@ var transport_goal_score: int:
 		return runtime_state.transport_goal_score
 	set(value):
 		runtime_state.transport_goal_score = value
+var transport_goal_victory_score: int:
+	get:
+		return runtime_state.transport_goal_victory_score
+	set(value):
+		runtime_state.transport_goal_victory_score = value
 var delivered_transport_ids: Dictionary:
 	get:
 		return runtime_state.delivered_transport_ids
@@ -384,6 +389,7 @@ func apply_transport_goal_from_stage(stage_data: Dictionary) -> void:
 	transport_goal_target_faction = "player"
 	transport_goal_target_unit_class = ""
 	transport_goal_score = 100
+	transport_goal_victory_score = 300
 	delivered_transport_ids.clear()
 	battle_score = 0
 	var goal_variant: Variant = stage_data.get("transport_goal", {})
@@ -409,6 +415,7 @@ func apply_transport_goal_from_stage(stage_data: Dictionary) -> void:
 	transport_goal_target_faction = str(goal.get("faction", "player")).strip_edges().to_lower()
 	transport_goal_target_unit_class = str(goal.get("unit_class", "")).strip_edges().to_lower()
 	transport_goal_score = maxi(1, int(goal.get("score", 100)))
+	transport_goal_victory_score = maxi(1, int(goal.get("victory_score", 300)))
 	transport_goal_enabled = true
 	_update_turn_label()
 	queue_redraw()
@@ -1532,7 +1539,7 @@ func _profile_str(profile: Dictionary, key: String, default_value: String) -> St
 func _turn_text() -> String:
 	var player_mp := query_faction_mp("player")
 	var enemy_mp := query_faction_mp("enemy")
-	var base := "ターン: %d/%d | 手番: %s | スコア: %d | MP P:%d E:%d" % [
+	var base := "ターン: %d/%d\n手番: %s\nカロリー: %dkcal\nMP P:%d E:%d" % [
 		turn_count,
 		turn_limit,
 		current_faction.to_upper(),
@@ -1541,17 +1548,18 @@ func _turn_text() -> String:
 		enemy_mp
 	]
 	if not transport_goal_enabled:
-		return base
+		return "%s\n勝利条件: " % base
 	var faction_label := transport_goal_target_faction.to_upper()
 	var target_text := transport_goal_target_unit_class if transport_goal_target_unit_class != "" else "transport*"
-	return "%s | 目標: (%d,%d) %s %s +%d" % [
-		base,
+	var condition := "(%d,%d) %s %s 到達で+%d / 合計%dカロリー以上" % [
 		transport_goal_tile.x,
 		transport_goal_tile.y,
 		faction_label,
 		target_text,
-		transport_goal_score
+		transport_goal_score,
+		transport_goal_victory_score
 	]
+	return "%s\n勝利条件: %s" % [base, condition]
 
 func _can_open_production_menu(tile: Vector2i) -> bool:
 	return BoardProductionService.can_open_menu(self, tile, current_faction)

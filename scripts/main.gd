@@ -22,12 +22,15 @@ const ATTACK_SEQUENCE_DURATION_SEC := 1.2
 const DEFEAT_EFFECT_CONFIG_PATH := "res://data/defeat_explosion.json"
 const HP_OFFSET_FACTOR := Vector2(-0.70, 0.10)
 const MOVED_MARKER_OFFSET_FACTOR := Vector2(0.40, 0.25)
+const LEFT_FLOATING_BUTTON_HEIGHT := 34.0
+const LEFT_FLOATING_BUTTON_GAP := 8.0
 
 @onready var board: HexBoard = $HexBoard
 @onready var left_panel: Control = $CanvasLayer/LeftPanel
 @onready var left_panel_vbox: VBoxContainer = $CanvasLayer/LeftPanel/Margin/VBox
 @onready var turn_label: Label = $CanvasLayer/LeftPanel/Margin/VBox/Turn
 @onready var status_label: Label = $CanvasLayer/LeftPanel/Margin/VBox/Status
+@onready var status_log_panel: PanelContainer = get_node_or_null("CanvasLayer/StatusLogPanel") as PanelContainer
 @onready var tile_info_label: Label = get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/TileInfo")
 @onready var unit_header_label: Label = get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/UnitHeader") as Label
 @onready var unit_info_label: Label = $CanvasLayer/LeftPanel/Margin/VBox/UnitInfo
@@ -48,6 +51,8 @@ const MOVED_MARKER_OFFSET_FACTOR := Vector2(0.40, 0.25)
 @onready var debug_victory_button: Button = get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/DebugVictory")
 @onready var debug_defeat_button: Button = get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/DebugDefeat")
 @onready var unit_hp_overlay_layer: Control = get_node_or_null("CanvasLayer/UnitHpOverlayLayer") as Control
+@onready var floating_end_turn_button: Button = get_node_or_null("CanvasLayer/LeftFloatingEndTurnButton") as Button
+@onready var floating_friendly_auto_button: Button = get_node_or_null("CanvasLayer/LeftFloatingFriendlyAutoButton") as Button
 
 var board_anchor := Vector2.ZERO
 var board_pan := Vector2.ZERO
@@ -64,6 +69,7 @@ var unit_hp_labels := {}
 var unit_moved_markers := {}
 var defeat_effect_config := {}
 var unit_action_menu_actions := {}
+var last_deployment_active := false
 var camera_controller: BattleCameraController
 var overlay_service := UnitOverlayService.new()
 var hud_controller: BattleHudController
@@ -85,6 +91,8 @@ func _ready() -> void:
 		"enemy_ai_production_editor"
 	])
 	_ensure_tile_info_label()
+	_fix_left_info_order()
+	_setup_status_log_panel()
 	_configure_left_panel_layout()
 	_apply_stage_map_settings()
 	board.bind_ui(turn_label, status_label, unit_info_label, tile_info_label)
@@ -150,6 +158,7 @@ func _ready() -> void:
 	if transport_goal_dialog != null:
 		transport_goal_dialog.get_ok_button().hide()
 	_hide_left_panel_debug_buttons()
+	_setup_left_floating_action_buttons()
 	if unit_header_label != null:
 		unit_header_label.visible = false
 	unit_info_label.visible = false
@@ -157,6 +166,7 @@ func _ready() -> void:
 	_apply_stage_initial_camera_if_needed()
 	_apply_battle_background()
 	_refresh_friendly_auto_ui_state()
+	last_deployment_active = bool(board.query_is_deployment_active())
 	_start_initial_deployment_phase_if_available()
 
 func _ensure_tile_info_label() -> void:
@@ -167,18 +177,27 @@ func _ensure_tile_info_label() -> void:
 	tile_info_label.text = "カーソル: -\n地形: -\n移動コスト: -"
 	tile_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left_panel_vbox.add_child(tile_info_label)
-	var unit_header := get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/UnitHeader")
-	var status := get_node_or_null("CanvasLayer/LeftPanel/Margin/VBox/Status")
-	if unit_header != null:
-		left_panel_vbox.move_child(tile_info_label, unit_header.get_index())
-	elif status != null:
-		left_panel_vbox.move_child(tile_info_label, status.get_index() + 1)
+
+func _fix_left_info_order() -> void:
+	if left_panel_vbox == null or turn_label == null or tile_info_label == null:
+		return
+	if turn_label.get_parent() != left_panel_vbox or tile_info_label.get_parent() != left_panel_vbox:
+		return
+	left_panel_vbox.move_child(turn_label, 0)
+	left_panel_vbox.move_child(tile_info_label, 1)
 
 func _process(delta: float) -> void:
 	var next_pan := camera_controller.apply_pan_input(delta, board_pan)
 	if next_pan != board_pan:
 		board_pan = next_pan
 		_apply_board_transform()
+	var deployment_active := bool(board.query_is_deployment_active())
+	if deployment_active != last_deployment_active:
+		last_deployment_active = deployment_active
+		_refresh_left_floating_action_buttons_visibility()
+		_refresh_end_turn_button_state()
+		if not deployment_active:
+			_fix_left_info_order()
 	_update_unit_hp_overlays()
 	_refresh_friendly_auto_ui_state()
 
@@ -200,10 +219,40 @@ func _refresh_layout() -> void:
 	board_rect = board.get_board_local_rect()
 	board_anchor = Vector2(left_panel.size.x + VIEW_PADDING, VIEW_PADDING)
 	_apply_board_transform()
+	_layout_status_log_panel()
+	_layout_left_floating_action_buttons()
 	if hud_controller != null:
 		hud_controller.layout_buttons()
 	_apply_battle_background()
 	_update_unit_hp_overlays()
+
+func _setup_status_log_panel() -> void:
+	if status_label == null:
+		return
+	if status_log_panel == null:
+		status_log_panel = PanelContainer.new()
+		status_log_panel.name = "StatusLogPanel"
+		$CanvasLayer.add_child(status_log_panel)
+	status_log_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if status_label.get_parent() != status_log_panel:
+		var old_parent := status_label.get_parent()
+		if old_parent != null:
+			old_parent.remove_child(status_label)
+		status_log_panel.add_child(status_label)
+	status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_layout_status_log_panel()
+
+func _layout_status_log_panel() -> void:
+	if status_log_panel == null:
+		return
+	var width := maxf(180.0, left_panel.size.x - 24.0)
+	var height := 110.0
+	status_log_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	status_log_panel.offset_right = -VIEW_PADDING
+	status_log_panel.offset_top = VIEW_PADDING
+	status_log_panel.offset_left = status_log_panel.offset_right - width
+	status_log_panel.offset_bottom = status_log_panel.offset_top + height
 
 func _ensure_unit_hp_overlay_layer() -> void:
 	unit_hp_overlay_layer = overlay_service.ensure_layer($CanvasLayer, unit_hp_overlay_layer)
@@ -260,6 +309,8 @@ func _hide_left_panel_debug_buttons() -> void:
 		debug_defeat_button.disabled = true
 
 func _on_end_turn_button_pressed() -> void:
+	if not _can_use_end_turn_button():
+		return
 	end_turn_confirm.popup_centered()
 
 func _on_end_turn_confirmed() -> void:
@@ -296,6 +347,8 @@ func _on_move_cancel_canceled() -> void:
 	board.cancel_pending_move_cancel()
 
 func _on_turn_started(faction: String) -> void:
+	_refresh_left_floating_action_buttons_visibility()
+	_refresh_end_turn_button_state()
 	if board != null and bool(board.query_is_deployment_active()):
 		return
 	var ai_faction := str(board.get("ai_faction"))
@@ -400,11 +453,78 @@ func _report_battle_result_once(victory: bool) -> void:
 		GameFlow.report_battle_result(victory)
 
 func _refresh_friendly_auto_ui_state() -> void:
-	if friendly_auto_button == null:
-		return
 	var can_use := false
 	can_use = bool(board.can_run_current_faction_auto_actions())
-	friendly_auto_button.disabled = not can_use
+	if friendly_auto_button != null:
+		friendly_auto_button.disabled = not can_use
+	if floating_friendly_auto_button != null:
+		floating_friendly_auto_button.disabled = not can_use
+
+func _can_use_end_turn_button() -> bool:
+	if board == null:
+		return false
+	if bool(board.query_is_deployment_active()):
+		return false
+	return str(board.query_current_faction()) != str(board.query_ai_faction())
+
+func _refresh_end_turn_button_state() -> void:
+	var can_use := _can_use_end_turn_button()
+	if floating_end_turn_button != null:
+		floating_end_turn_button.disabled = not can_use
+
+func _refresh_left_floating_action_buttons_visibility() -> void:
+	var visible := true
+	if board != null and bool(board.query_is_deployment_active()):
+		visible = false
+	if floating_end_turn_button != null:
+		floating_end_turn_button.visible = visible
+	if floating_friendly_auto_button != null:
+		floating_friendly_auto_button.visible = visible
+
+func _setup_left_floating_action_buttons() -> void:
+	if end_turn_button != null:
+		end_turn_button.visible = false
+		end_turn_button.disabled = true
+	if friendly_auto_button != null:
+		friendly_auto_button.visible = false
+		friendly_auto_button.disabled = true
+	if floating_end_turn_button == null:
+		floating_end_turn_button = Button.new()
+		floating_end_turn_button.name = "LeftFloatingEndTurnButton"
+		floating_end_turn_button.text = "ターン終了"
+		floating_end_turn_button.custom_minimum_size = Vector2(0.0, LEFT_FLOATING_BUTTON_HEIGHT)
+		$CanvasLayer.add_child(floating_end_turn_button)
+	if not floating_end_turn_button.pressed.is_connected(_on_end_turn_button_pressed):
+		floating_end_turn_button.pressed.connect(_on_end_turn_button_pressed)
+	if floating_friendly_auto_button == null:
+		floating_friendly_auto_button = Button.new()
+		floating_friendly_auto_button.name = "LeftFloatingFriendlyAutoButton"
+		floating_friendly_auto_button.text = "味方自動行動"
+		floating_friendly_auto_button.custom_minimum_size = Vector2(0.0, LEFT_FLOATING_BUTTON_HEIGHT)
+		$CanvasLayer.add_child(floating_friendly_auto_button)
+	if not floating_friendly_auto_button.pressed.is_connected(_on_friendly_auto_button_pressed):
+		floating_friendly_auto_button.pressed.connect(_on_friendly_auto_button_pressed)
+	_layout_left_floating_action_buttons()
+	_refresh_left_floating_action_buttons_visibility()
+	_refresh_end_turn_button_state()
+	_refresh_friendly_auto_ui_state()
+
+func _layout_left_floating_action_buttons() -> void:
+	if floating_end_turn_button == null or floating_friendly_auto_button == null:
+		return
+	var width := maxf(120.0, left_panel.size.x - VIEW_PADDING * 2.0)
+	var height := LEFT_FLOATING_BUTTON_HEIGHT
+	var base_bottom := -VIEW_PADDING
+	floating_end_turn_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	floating_end_turn_button.offset_left = VIEW_PADDING
+	floating_end_turn_button.offset_right = VIEW_PADDING + width
+	floating_end_turn_button.offset_bottom = base_bottom
+	floating_end_turn_button.offset_top = base_bottom - height
+	floating_friendly_auto_button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	floating_friendly_auto_button.offset_left = VIEW_PADDING
+	floating_friendly_auto_button.offset_right = VIEW_PADDING + width
+	floating_friendly_auto_button.offset_bottom = base_bottom - (height + LEFT_FLOATING_BUTTON_GAP)
+	floating_friendly_auto_button.offset_top = floating_friendly_auto_button.offset_bottom - height
 
 func _apply_stage_map_settings() -> void:
 	if not has_node("/root/GameFlow"):
@@ -521,6 +641,9 @@ func _on_deployment_finished() -> void:
 	if board != null:
 		board.cmd_finish_initial_deployment_phase()
 		board.cmd_notify_turn_started()
+	_fix_left_info_order()
+	_refresh_left_floating_action_buttons_visibility()
+	_refresh_end_turn_button_state()
 
 func _start_initial_deployment_phase_if_available() -> void:
 	if board == null:

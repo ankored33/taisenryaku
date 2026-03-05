@@ -39,6 +39,7 @@ var transport_goal_tile := Vector2i(-1, -1)
 var transport_goal_target_faction := "player"
 var transport_goal_target_unit_class := ""
 var transport_goal_score := 100
+var transport_goal_victory_score := 300
 var delivered_transport_ids := {}
 var capture_points := {}
 var capture_allowed_unit_classes: Array[String] = ["infantry"]

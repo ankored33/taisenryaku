@@ -37,6 +37,11 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "手番: -"
 
+[node name="TileInfo" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
+layout_mode = 2
+text = "カーソル: -\n地形: -\n移動コスト: -"
+autowrap_mode = 2
+
 [node name="Status" type="Label" parent="CanvasLayer/LeftPanel/Margin/VBox"]
 layout_mode = 2
 text = "状態"

@@ -308,7 +308,7 @@ func _ensure_unit_param_editor() -> void:
 	_add_unit_param_spin(grid, "vision", "視界")
 	_add_unit_param_spin(grid, "min_range", "最小射程")
 	_add_unit_param_spin(grid, "range", "最大射程")
-	_add_unit_param_spin(grid, "delivery_score", "輸送スコア")
+	_add_unit_param_spin(grid, "delivery_score", "輸送カロリー")
 	_add_unit_param_check(grid, "can_attack", "攻撃可")
 	_add_unit_param_check(grid, "is_transport", "輸送扱い")
 	_add_unit_param_spin(grid, "icon", "アイコン", true)
