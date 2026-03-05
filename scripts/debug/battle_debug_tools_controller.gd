@@ -3,6 +3,7 @@ class_name BattleDebugToolsController
 
 const BoardRendererService = preload("res://scripts/board/board_renderer_service.gd")
 const BgmEditorController = preload("res://scripts/ui/bgm_editor_controller.gd")
+const EventEditorController = preload("res://scripts/ui/event_editor_controller.gd")
 
 var canvas_layer: CanvasLayer
 var board: HexBoard
@@ -26,6 +27,7 @@ var unit_param_tiled_hint: TextEdit
 var enemy_ai_production_checks := {}
 var enemy_ai_production_enable_check: CheckBox
 var bgm_editor_controller: BgmEditorController
+var event_editor_controller: EventEditorController
 
 func setup(layer: CanvasLayer, board_node: HexBoard, hud: BattleHudController) -> void:
 	canvas_layer = layer
@@ -34,6 +36,7 @@ func setup(layer: CanvasLayer, board_node: HexBoard, hud: BattleHudController) -
 	_ensure_terrain_color_editor()
 	_ensure_fog_debug_button()
 	_ensure_bgm_editor()
+	_ensure_event_editor()
 	_ensure_unit_param_editor()
 	_ensure_enemy_ai_production_editor()
 
@@ -178,6 +181,42 @@ func _on_stage_audio_saved() -> void:
 		var current_faction := str(board.query_current_faction())
 		var ai_faction := str(board.get("ai_faction"))
 		game_flow.play_battle_turn_bgm(current_faction, ai_faction)
+
+func _ensure_event_editor() -> void:
+	if event_editor_controller == null:
+		event_editor_controller = EventEditorController.new()
+		event_editor_controller.setup(
+			canvas_layer,
+			hud_controller,
+			Callable(self, "_current_stage_event_config"),
+			Callable(self, "_save_stage_event_config"),
+			Callable(self, "_on_stage_event_saved")
+		)
+	if hud_controller != null:
+		hud_controller.layout_buttons()
+
+func _current_stage_event_config(event_key: String) -> Dictionary:
+	var game_flow := _game_flow()
+	if game_flow != null and game_flow.has_method("get_current_stage_event_data"):
+		var value: Variant = game_flow.get_current_stage_event_data(event_key)
+		if value is Dictionary:
+			return (value as Dictionary).duplicate(true)
+	var stage_variant: Variant = game_flow.get_current_stage_data() if game_flow != null and game_flow.has_method("get_current_stage_data") else {}
+	if not (stage_variant is Dictionary):
+		return {}
+	var stage := stage_variant as Dictionary
+	var event_value: Variant = stage.get(event_key, {})
+	return (event_value as Dictionary).duplicate(true) if event_value is Dictionary else {}
+
+func _save_stage_event_config(event_key: String, event_data: Dictionary) -> bool:
+	var game_flow := _game_flow()
+	if game_flow != null and game_flow.has_method("update_current_stage_event_data"):
+		return bool(game_flow.update_current_stage_event_data(event_key, event_data))
+	return false
+
+func _on_stage_event_saved(message: String) -> void:
+	if board != null and board.has_method("cmd_update_status"):
+		board.cmd_update_status(message)
 
 func _ensure_unit_param_editor() -> void:
 	if hud_controller != null:

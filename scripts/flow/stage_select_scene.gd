@@ -1,12 +1,29 @@
 extends Control
 
+const EventEditorController = preload("res://scripts/ui/event_editor_controller.gd")
+
 @onready var girl_option: OptionButton = $Margin/VBox/GirlRow/GirlOption
 @onready var stage_list: VBoxContainer = $Margin/VBox/StageList
 @onready var info_label: Label = $Margin/VBox/Info
 
+var event_editor_controller: EventEditorController
+
 func _ready() -> void:
+	_setup_event_editor()
 	_populate_girl_options()
 	_refresh_view()
+
+func _setup_event_editor() -> void:
+	if event_editor_controller != null:
+		return
+	event_editor_controller = EventEditorController.new()
+	event_editor_controller.setup(
+		self,
+		null,
+		Callable(self, "_current_stage_event_config"),
+		Callable(self, "_save_stage_event_config"),
+		Callable(self, "_on_stage_event_saved")
+	)
 
 func _populate_girl_options() -> void:
 	girl_option.clear()
@@ -37,7 +54,11 @@ func _refresh_view() -> void:
 		child.queue_free()
 	var stages := GameFlow.get_selected_girl_stages()
 	for stage in stages:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
 		var button := Button.new()
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var index := int(stage.get("index", 0))
 		var unlocked := bool(stage.get("unlocked", false))
 		var cleared := bool(stage.get("cleared", false))
@@ -45,7 +66,14 @@ func _refresh_view() -> void:
 		button.text = _build_stage_label(index, unlocked, cleared, exists)
 		button.disabled = not unlocked or not exists
 		button.pressed.connect(_on_stage_pressed.bind(index))
-		stage_list.add_child(button)
+		row.add_child(button)
+		var edit_button := Button.new()
+		edit_button.text = "イベント編集"
+		edit_button.custom_minimum_size = Vector2(120.0, 0.0)
+		edit_button.disabled = not exists
+		edit_button.pressed.connect(_on_stage_event_edit_pressed.bind(index))
+		row.add_child(edit_button)
+		stage_list.add_child(row)
 	_update_info_label()
 
 func _build_stage_label(index: int, unlocked: bool, cleared: bool, exists: bool) -> String:
@@ -63,7 +91,7 @@ func _update_info_label() -> void:
 	if notice != "":
 		info_label.text = notice
 		return
-	info_label.text = "%s を選択中。開放済みステージを選んでください。" % GameFlow.get_selected_girl_name()
+	info_label.text = "%s を選択中。ステージ開始または「イベント編集」を選んでください。" % GameFlow.get_selected_girl_name()
 
 func _on_girl_selected(index: int) -> void:
 	var girl_id := str(girl_option.get_item_metadata(index))
@@ -76,3 +104,27 @@ func _on_stage_pressed(stage_index: int) -> void:
 	if started:
 		return
 	_update_info_label()
+
+func _on_stage_event_edit_pressed(stage_index: int) -> void:
+	var ok := GameFlow.select_stage_for_edit(stage_index)
+	if not ok:
+		_update_info_label()
+		return
+	if event_editor_controller != null:
+		event_editor_controller.open()
+	_update_info_label()
+
+func _current_stage_event_config(event_key: String) -> Dictionary:
+	if GameFlow.has_method("get_current_stage_event_data"):
+		var value: Variant = GameFlow.get_current_stage_event_data(event_key)
+		if value is Dictionary:
+			return (value as Dictionary).duplicate(true)
+	return {}
+
+func _save_stage_event_config(event_key: String, event_data: Dictionary) -> bool:
+	if GameFlow.has_method("update_current_stage_event_data"):
+		return bool(GameFlow.update_current_stage_event_data(event_key, event_data))
+	return false
+
+func _on_stage_event_saved(message: String) -> void:
+	info_label.text = message

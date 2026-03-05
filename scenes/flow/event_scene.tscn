@@ -1,6 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://c0eajf7311v5n"]
+[gd_scene load_steps=3 format=3 uid="uid://c0eajf7311v5n"]
 
 [ext_resource type="Script" path="res://scripts/flow/event_scene.gd" id="1_evt"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_novel"]
+bg_color = Color(0, 0, 0, 0.76)
+content_margin_left = 28.0
+content_margin_top = 18.0
+content_margin_right = 28.0
+content_margin_bottom = 18.0
 
 [node name="EventScene" type="Control"]
 layout_mode = 3
@@ -11,37 +18,46 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_evt")
 
-[node name="Margin" type="MarginContainer" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 40.0
-offset_top = 32.0
-offset_right = -40.0
-offset_bottom = -32.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+expand_mode = 1
+stretch_mode = 6
 
-[node name="VBox" type="VBoxContainer" parent="Margin"]
+[node name="BottomPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -260.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_novel")
+
+[node name="VBox" type="VBoxContainer" parent="BottomPanel"]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Margin/VBox"]
+[node name="Title" type="Label" parent="BottomPanel/VBox"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "イベント"
 
-[node name="Body" type="Label" parent="Margin/VBox"]
+[node name="Body" type="Label" parent="BottomPanel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
 text = "..."
 autowrap_mode = 2
 
-[node name="Continue" type="Button" parent="Margin/VBox"]
+[node name="Continue" type="Button" parent="BottomPanel/VBox"]
 layout_mode = 2
+size_flags_horizontal = 8
 text = "続ける"

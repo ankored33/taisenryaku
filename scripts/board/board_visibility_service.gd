@@ -88,5 +88,31 @@ static func is_tile_explored_to_player(board: HexBoard, tile: Vector2i) -> bool:
 static func is_unit_visible_to_player(board: HexBoard, unit_idx: int) -> bool:
 	if unit_idx < 0 or unit_idx >= board.units.size():
 		return false
-	var tile := board.query_to_vec2i(board.units[unit_idx].get(UnitState.POS, Vector2i(-1, -1)))
-	return is_tile_visible_to_player(board, tile)
+	return _is_unit_visible_to_faction(board, unit_idx, FOG_VIEWER_FACTION)
+
+static func _is_unit_visible_to_faction(board: HexBoard, unit_idx: int, viewer_faction: String) -> bool:
+	var unit := board.units[unit_idx]
+	var tile := board.query_to_vec2i(unit.get(UnitState.POS, Vector2i(-1, -1)))
+	if not is_tile_visible_for_faction(board, tile, viewer_faction):
+		return false
+
+	var target_faction := str(unit.get(UnitState.FACTION, "")).strip_edges().to_lower()
+	var viewer_key := viewer_faction.strip_edges().to_lower()
+	if target_faction == viewer_key:
+		return true
+
+	var terrain := board.query_terrain_type(tile)
+	var detect_penalty := 1 if terrain == "forest" else 0
+	if detect_penalty <= 0:
+		return true
+
+	for viewer in board.units:
+		if str(viewer.get(UnitState.FACTION, "")).strip_edges().to_lower() != viewer_key:
+			continue
+		var viewer_tile := board.query_to_vec2i(viewer.get(UnitState.POS, Vector2i(-1, -1)))
+		if not board.query_is_valid_hex(viewer_tile):
+			continue
+		var detect_range := maxi(0, board.query_unit_vision(viewer) - detect_penalty)
+		if board.query_hex_distance(viewer_tile, tile) <= detect_range:
+			return true
+	return false

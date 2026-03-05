@@ -5,6 +5,7 @@ const DEFAULT_BGM_VOLUME_DB := -8.0
 const DEFAULT_SE_VOLUME_DB := -6.0
 
 var bgm_player: AudioStreamPlayer
+var se_player: AudioStreamPlayer
 var current_bgm_path := ""
 var bgm_volume_db := DEFAULT_BGM_VOLUME_DB
 var se_volume_db := DEFAULT_SE_VOLUME_DB
@@ -13,6 +14,10 @@ func _ready() -> void:
 	bgm_player = AudioStreamPlayer.new()
 	add_child(bgm_player)
 	bgm_player.autoplay = false
+	se_player = AudioStreamPlayer.new()
+	add_child(se_player)
+	se_player.autoplay = false
+	se_player.volume_db = se_volume_db
 	_load_settings()
 
 func play_bgm(path: String, volume_db: float = NAN) -> void:
@@ -50,10 +55,29 @@ func get_bgm_volume_db() -> float:
 
 func set_se_volume_db(value: float) -> void:
 	se_volume_db = clampf(value, -40.0, 6.0)
+	if se_player != null:
+		se_player.volume_db = se_volume_db
 	_save_settings()
 
 func get_se_volume_db() -> float:
 	return se_volume_db
+
+func play_se(path: String, volume_db: float = NAN) -> void:
+	var normalized := path.strip_edges()
+	if normalized == "":
+		return
+	var stream := load(normalized) as AudioStream
+	if stream == null:
+		push_warning("SEの読み込みに失敗: %s" % normalized)
+		return
+	if se_player == null:
+		return
+	se_player.stream = stream
+	if is_nan(volume_db):
+		se_player.volume_db = se_volume_db
+	else:
+		se_player.volume_db = volume_db
+	se_player.play()
 
 func _load_settings() -> void:
 	var file := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
@@ -65,6 +89,10 @@ func _load_settings() -> void:
 	var src := parsed as Dictionary
 	bgm_volume_db = clampf(float(src.get("bgm_volume_db", DEFAULT_BGM_VOLUME_DB)), -40.0, 6.0)
 	se_volume_db = clampf(float(src.get("se_volume_db", DEFAULT_SE_VOLUME_DB)), -40.0, 6.0)
+	if bgm_player != null:
+		bgm_player.volume_db = bgm_volume_db
+	if se_player != null:
+		se_player.volume_db = se_volume_db
 
 func _save_settings() -> void:
 	var payload := {

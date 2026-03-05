@@ -1,17 +1,35 @@
 {
-	"battle_scene": "res://scenes/battle/battle_scene.tscn",
 	"audio": {
-		"intermission": "",
-		"victory": "",
-		"defeat": "",
-		"complete": "",
 		"battle": {
-			"player_turn": "",
-			"enemy_turn": ""
-		}
+			"enemy_turn": "",
+			"player_turn": ""
+		},
+		"complete": "",
+		"defeat": "",
+		"intermission": "",
+		"victory": ""
 	},
+	"battle_scene": "res://scenes/battle/battle_scene.tscn",
 	"event_after_defeat": {
+		"bgm": "",
+		"cuts": [
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "戦線は押し切られた。",
+				"title": "ステージ1: 敗北"
+			},
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "作戦を見直して再挑戦しよう。",
+				"title": "ステージ1: 敗北"
+			}
+		],
 		"image": "",
+		"se": "",
 		"text": [
 			"戦線は押し切られた。",
 			"作戦を見直して再挑戦しよう。"
@@ -19,7 +37,25 @@
 		"title": "ステージ1: 敗北"
 	},
 	"event_after_victory": {
+		"bgm": "",
+		"cuts": [
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "戦場の主導権を確保した。",
+				"title": "ステージ1: 勝利"
+			},
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "次のステージへ進もう。",
+				"title": "ステージ1: 勝利"
+			}
+		],
 		"image": "",
+		"se": "",
 		"text": [
 			"戦場の主導権を確保した。",
 			"次のステージへ進もう。"
@@ -27,7 +63,25 @@
 		"title": "ステージ1: 勝利"
 	},
 	"event_before": {
+		"bgm": "",
+		"cuts": [
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "1思考戦域で最初の衝突が始まる。aあああああああああああああああああああああああああああああああああああああ思考戦域で最初の衝突が始まる。aああああああああああ\n2思考戦域で最初の衝突が始まる。aあああああああああああああああああああああああああああああああああああああ思考戦域で最初の衝突が始まる。aああああああああああ\n3思考戦域で最初の衝突が始まる。aあああああああああああああああああああああああああああああああああああああ思考戦域で最初の衝突が始まる。aああああああああああ\n4思考戦域で最初の衝突が始まる。aあああああああああああああああああああああああああああああああああああああ思考戦域で最初の衝突が始まる。aああああああああああ\n5思考戦域で最初の衝突が始まる。aあああああああああああああああああああああああああああああああああああああ思考戦域で最初の衝突が始まる。aああああああああああ",
+				"title": "ステージ1: ブリーフィング"
+			},
+			{
+				"bgm": "",
+				"image": "",
+				"se": "",
+				"text": "有利な位置を確保して敵の勢いを断て。",
+				"title": "ステージ1: ブリーフィング"
+			}
+		],
 		"image": "",
+		"se": "",
 		"text": [
 			"思考戦域で最初の衝突が始まる。",
 			"有利な位置を確保して敵の勢いを断て。"
@@ -37,18 +91,11 @@
 	"id": "stage_01",
 	"map": {
 		"background_image": "res://data/tiled/src/bgimage/stage01.png",
-		"cols": 24,
-		"rows": 54
+		"cols": 24.0,
+		"rows": 54.0
 	},
 	"name": "開幕戦",
 	"prep_text": "ユニット状態を確認し、作戦を開始してください。",
-	"transport_goal": {
-		"tile": [12, 26],
-		"faction": "player",
-		"unit_class": "transport",
-		"score": 100,
-		"victory_score": 300
-	},
 	"tiled_map": {
 		"default_terrain": "plain",
 		"gid_terrain": {
@@ -63,5 +110,15 @@
 		},
 		"path": "res://data/tiled/export/stage01.tmj",
 		"terrain_layer": "地面"
+	},
+	"transport_goal": {
+		"faction": "player",
+		"score": 100.0,
+		"tile": [
+			12.0,
+			26.0
+		],
+		"unit_class": "transport",
+		"victory_score": 300.0
 	}
 }

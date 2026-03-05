@@ -24,10 +24,11 @@ const TERRAIN_MOVE_COST := {
 	"plain": 1,
 	"basin": 1,
 	"forest": 2,
-	"hill": 3
+	"hill": 3,
+	"peak": 3,
+	"water": 1
 }
 const IMPASSABLE_TERRAINS := {
-	"peak": true,
 	"water": true,
 	"abyss": true
 }
@@ -1731,7 +1732,20 @@ func _terrain_type(tile: Vector2i) -> String:
 	return str(terrain_overrides.get(tile, default_terrain))
 
 func _unit_vision(unit: Dictionary) -> int:
-	return maxi(0, int(unit.get(UnitState.VISION, DEFAULT_UNIT_VISION)))
+	var base_vision := maxi(0, int(unit.get(UnitState.VISION, DEFAULT_UNIT_VISION)))
+	var tile := _to_vec2i(unit.get(UnitState.POS, Vector2i(-1, -1)))
+	if not _is_valid_hex(tile):
+		return base_vision
+	var terrain := _terrain_type(tile)
+	return maxi(0, base_vision + _terrain_vision_bonus(terrain))
+
+func _terrain_vision_bonus(terrain: String) -> int:
+	var key := terrain.strip_edges().to_lower()
+	if key == "hill":
+		return 1
+	if key == "peak":
+		return 2
+	return 0
 
 func _warm_unit_icon_cache() -> void:
 	unit_icon_cache.clear()

@@ -78,6 +78,7 @@ func _ready() -> void:
 		"terrain_color_editor",
 		"fog_debug",
 		"bgm_editor",
+		"event_editor",
 		"unit_param_editor",
 		"enemy_ai_production_editor"
 	])

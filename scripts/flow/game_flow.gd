@@ -89,6 +89,34 @@ func get_stage_select_notice() -> String:
 func start_selected_stage(stage_index: int) -> bool:
 	return start_stage(selected_girl_id, stage_index)
 
+func select_stage_for_edit(stage_index: int) -> bool:
+	stage_select_notice = ""
+	if campaign_girls.is_empty():
+		_load_campaign_data()
+	var normalized := selected_girl_id.strip_edges().to_lower()
+	var idx := _find_girl_index(normalized)
+	if idx == -1:
+		stage_select_notice = "存在しないキャラクターです。"
+		return false
+	var stage_ids := _get_stage_ids(normalized)
+	if stage_index < 0 or stage_index >= stage_ids.size():
+		stage_select_notice = "存在しないステージです。"
+		return false
+	var stage_id := str(stage_ids[stage_index])
+	if stage_id == "":
+		stage_select_notice = "ステージIDが設定されていません。"
+		return false
+	if not _stage_file_exists(stage_id):
+		stage_select_notice = "このステージはまだ未実装です。"
+		return false
+	selected_stage_index = stage_index
+	current_stage_id = stage_id
+	_load_stage_data_by_id(stage_id)
+	if current_stage_data.is_empty():
+		stage_select_notice = "ステージデータの読み込みに失敗しました。"
+		return false
+	return true
+
 func debug_start_stage_battle(girl_id: String, stage_index: int) -> bool:
 	stage_select_notice = ""
 	if campaign_girls.is_empty():
@@ -178,6 +206,29 @@ func get_event_continue_label() -> String:
 	if current_phase == "complete":
 		return "最初から"
 	return "続ける"
+
+func get_current_stage_event_data(event_key: String) -> Dictionary:
+	var key := _normalize_event_key(event_key)
+	if key == "":
+		return {}
+	var value: Variant = current_stage_data.get(key, {})
+	if value is Dictionary:
+		return (value as Dictionary).duplicate(true)
+	return {}
+
+func update_current_stage_event_data(event_key: String, event_data: Dictionary) -> bool:
+	if current_stage_source_path == "":
+		return false
+	var key := _normalize_event_key(event_key)
+	if key == "":
+		return false
+	current_stage_source_data[key] = _normalize_stage_event_data(event_data)
+	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
+	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
+	return true
 
 func continue_from_event() -> void:
 	if current_phase == "event_before":
@@ -537,4 +588,78 @@ func _normalize_unit_class_list(raw: Variant) -> Array[String]:
 			continue
 		seen[unit_class] = true
 		result.append(unit_class)
+	return result
+
+func _normalize_event_key(event_key: String) -> String:
+	var key := event_key.strip_edges().to_lower()
+	if key == "event_before" or key == "event_after_victory" or key == "event_after_defeat":
+		return key
+	return ""
+
+func _normalize_stage_event_data(raw: Variant) -> Dictionary:
+	var src: Dictionary = raw if raw is Dictionary else {}
+	var title := str(src.get("title", "イベント"))
+	var image := str(src.get("image", "")).strip_edges()
+	var bgm := str(src.get("bgm", "")).strip_edges()
+	var se := str(src.get("se", "")).strip_edges()
+	var cuts := _normalize_event_cuts(src, image, bgm, se)
+	return {
+		"title": title,
+		"text": src.get("text", ""),
+		"image": image,
+		"bgm": bgm,
+		"se": se,
+		"cuts": cuts
+	}
+
+func _normalize_event_cuts(src: Dictionary, default_image: String, default_bgm: String, default_se: String) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var cuts_variant: Variant = src.get("cuts", [])
+	if cuts_variant is Array and not (cuts_variant as Array).is_empty():
+		for item in (cuts_variant as Array):
+			if not (item is Dictionary):
+				continue
+			var cut := item as Dictionary
+			result.append({
+				"title": str(cut.get("title", "")),
+				"text": str(cut.get("text", "")),
+				"image": str(cut.get("image", "")).strip_edges(),
+				"bgm": str(cut.get("bgm", "")).strip_edges(),
+				"se": str(cut.get("se", "")).strip_edges()
+			})
+		if not result.is_empty():
+			return result
+	var pages_variant: Variant = src.get("pages", [])
+	if pages_variant is Array and not (pages_variant as Array).is_empty():
+		for item in (pages_variant as Array):
+			if not (item is Dictionary):
+				continue
+			var page := item as Dictionary
+			result.append({
+				"title": str(page.get("title", "")),
+				"text": str(page.get("text", "")),
+				"image": str(page.get("image", "")).strip_edges(),
+				"bgm": str(page.get("bgm", "")).strip_edges(),
+				"se": str(page.get("se", "")).strip_edges()
+			})
+		if not result.is_empty():
+			return result
+	var text_variant: Variant = src.get("text", "")
+	if text_variant is Array:
+		for line in (text_variant as Array):
+			result.append({
+				"title": "",
+				"text": str(line),
+				"image": default_image,
+				"bgm": default_bgm,
+				"se": ""
+			})
+	else:
+		result.append({
+			"title": "",
+			"text": str(text_variant),
+			"image": default_image,
+			"bgm": default_bgm,
+			"se": default_se
+		})
 	return result
