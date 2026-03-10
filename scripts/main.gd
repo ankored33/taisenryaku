@@ -24,16 +24,6 @@ const HP_OFFSET_FACTOR := Vector2(-0.70, 0.10)
 const MOVED_MARKER_OFFSET_FACTOR := Vector2(0.40, 0.25)
 const LEFT_FLOATING_BUTTON_HEIGHT := 34.0
 const LEFT_FLOATING_BUTTON_GAP := 8.0
-const DEFAULT_DEFEAT_SE_CUE_PATHS := {
-	"SE_Explosion_01": "res://assets/audio/se/SE_Explosion_01.ogg"
-}
-const DEFEAT_SE_SEARCH_DIRS := [
-	"res://assets/audio/se",
-	"res://assets/se",
-	"res://audio/se",
-	"res://audio"
-]
-const DEFEAT_SE_SEARCH_EXTENSIONS := [".ogg", ".wav", ".mp3"]
 
 @onready var board: HexBoard = $HexBoard
 @onready var left_panel: Control = $CanvasLayer/LeftPanel
@@ -421,87 +411,17 @@ func _on_board_unit_removed(payload: Dictionary) -> void:
 		local_position = local_position_variant
 	elif payload.has("tile"):
 		local_position = board.map_to_local(board.query_to_vec2i(payload.get("tile", Vector2i.ZERO)))
-	_play_enemy_defeat_explosion(local_position)
+	_play_defeat_effect(local_position)
 
 func _on_defeat_condition_met(_reason: String) -> void:
 	_report_battle_result_once(false)
 
 func _load_defeat_effect_config() -> void:
-	var fallback := {
-		"id": "defeat_explosion",
-		"trigger": "on_enemy_defeat",
-		"vfx": {
-			"type": "sprite_sheet",
-			"offset": [0, 1.0, 0],
-			"scale": 0.66,
-			"lifetime_sec": 0.5,
-			"sprite_sheet": {
-				"texture": "res://assets/vfx/explosion_sheet.png",
-				"frame_width": 192,
-				"frame_height": 192,
-				"frames": 7,
-				"columns": 7,
-				"rows": 1,
-				"fps": 14
-			}
-		},
-		"sfx": {
-			"cue": "",
-			"volume": 0.9
-		}
-	}
+	var fallback := BattleDefeatEffectService.default_config()
 	defeat_effect_config = BattleDefeatEffectService.load_config(DEFEAT_EFFECT_CONFIG_PATH, fallback)
 
-func _play_enemy_defeat_explosion(local_position: Vector2) -> void:
-	BattleDefeatEffectService.play_enemy_defeat_explosion(board, local_position, defeat_effect_config)
-	_play_defeat_se()
-
-func _play_defeat_se() -> void:
-	var audio_manager := get_node_or_null("/root/AudioManager")
-	if audio_manager == null or not audio_manager.has_method("play_se"):
-		return
-	var sfx_variant: Variant = defeat_effect_config.get("sfx", {})
-	if not (sfx_variant is Dictionary):
-		return
-	var sfx := sfx_variant as Dictionary
-	var se_path := _resolve_defeat_se_path(sfx)
-	if se_path == "":
-		return
-	var volume_db := NAN
-	if sfx.has("volume_db"):
-		volume_db = float(sfx.get("volume_db", NAN))
-	elif sfx.has("volume"):
-		var linear := clampf(float(sfx.get("volume", 1.0)), 0.0, 2.0)
-		volume_db = linear_to_db(maxf(0.0001, linear))
-	audio_manager.play_se(se_path, volume_db)
-
-func _resolve_defeat_se_path(sfx: Dictionary) -> String:
-	var path := str(sfx.get("path", "")).strip_edges()
-	if path != "":
-		if ResourceLoader.exists(path):
-			return path
-		return ""
-	var cue := str(sfx.get("cue", "")).strip_edges()
-	if cue == "":
-		return ""
-	if cue.begins_with("res://") or cue.begins_with("user://"):
-		if ResourceLoader.exists(cue):
-			return cue
-		return ""
-	if DEFAULT_DEFEAT_SE_CUE_PATHS.has(cue):
-		var mapped := str(DEFAULT_DEFEAT_SE_CUE_PATHS[cue])
-		if ResourceLoader.exists(mapped):
-			return mapped
-	var cue_base := cue.get_basename()
-	for dir_path in DEFEAT_SE_SEARCH_DIRS:
-		for ext in DEFEAT_SE_SEARCH_EXTENSIONS:
-			var candidate := "%s/%s%s" % [dir_path, cue, ext]
-			if ResourceLoader.exists(candidate):
-				return candidate
-			var candidate_base := "%s/%s%s" % [dir_path, cue_base, ext]
-			if ResourceLoader.exists(candidate_base):
-				return candidate_base
-	return ""
+func _play_defeat_effect(local_position: Vector2) -> void:
+	BattleDefeatEffectService.play_defeat_effect(board, local_position, defeat_effect_config)
 
 func _on_debug_victory_pressed() -> void:
 	_report_battle_result_once(true)

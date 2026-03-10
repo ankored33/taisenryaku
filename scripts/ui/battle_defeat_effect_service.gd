@@ -1,6 +1,42 @@
 class_name BattleDefeatEffectService
 extends RefCounted
 
+const DEFAULT_SE_CUE_PATHS := {
+	"SE_Explosion_01": "res://assets/audio/se/SE_Explosion_01.ogg"
+}
+const SE_SEARCH_DIRS := [
+	"res://assets/audio/se",
+	"res://assets/se",
+	"res://audio/se",
+	"res://audio"
+]
+const SE_SEARCH_EXTENSIONS := [".ogg", ".wav", ".mp3"]
+
+static func default_config() -> Dictionary:
+	return {
+		"id": "defeat_explosion",
+		"trigger": "on_unit_defeat",
+		"vfx": {
+			"type": "sprite_sheet",
+			"offset": [0, 1.0, 0],
+			"scale": 0.66,
+			"lifetime_sec": 0.5,
+			"sprite_sheet": {
+				"texture": "res://assets/vfx/explosion_sheet.png",
+				"frame_width": 192,
+				"frame_height": 192,
+				"frames": 7,
+				"columns": 7,
+				"rows": 1,
+				"fps": 14
+			}
+		},
+		"sfx": {
+			"cue": "SE_Explosion_01",
+			"volume": 0.9
+		}
+	}
+
 static func load_config(path: String, fallback_config: Dictionary) -> Dictionary:
 	var config := fallback_config.duplicate(true)
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -8,10 +44,14 @@ static func load_config(path: String, fallback_config: Dictionary) -> Dictionary
 		return config
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if parsed is Dictionary:
-		config = (parsed as Dictionary).duplicate(true)
+		config = _deep_merge_dict((parsed as Dictionary).duplicate(true), config)
 	return config
 
-static func play_enemy_defeat_explosion(board: HexBoard, local_position: Vector2, config: Dictionary) -> void:
+static func play_defeat_effect(board: HexBoard, local_position: Vector2, config: Dictionary) -> void:
+	play_defeat_explosion(board, local_position, config)
+	play_defeat_se(board, config)
+
+static func play_defeat_explosion(board: HexBoard, local_position: Vector2, config: Dictionary) -> void:
 	var vfx_variant: Variant = config.get("vfx", {})
 	var vfx: Dictionary = vfx_variant if vfx_variant is Dictionary else {}
 	var vfx_type := str(vfx.get("type", "particles")).strip_edges().to_lower()
@@ -59,6 +99,53 @@ static func play_enemy_defeat_explosion(board: HexBoard, local_position: Vector2
 	particles.emitting = true
 
 	_schedule_cleanup(board, effect_node, lifetime_sec + 0.45)
+
+static func play_defeat_se(board: HexBoard, config: Dictionary) -> void:
+	var audio_manager := board.get_node_or_null("/root/AudioManager")
+	if audio_manager == null or not audio_manager.has_method("play_se"):
+		return
+	var sfx_variant: Variant = config.get("sfx", {})
+	if not (sfx_variant is Dictionary):
+		return
+	var sfx := sfx_variant as Dictionary
+	var se_path := _resolve_se_path(sfx)
+	if se_path == "":
+		return
+	var volume_db := NAN
+	if sfx.has("volume_db"):
+		volume_db = float(sfx.get("volume_db", NAN))
+	elif sfx.has("volume"):
+		var linear := clampf(float(sfx.get("volume", 1.0)), 0.0, 2.0)
+		volume_db = linear_to_db(maxf(0.0001, linear))
+	audio_manager.play_se(se_path, volume_db)
+
+static func _resolve_se_path(sfx: Dictionary) -> String:
+	var path := str(sfx.get("path", "")).strip_edges()
+	if path != "":
+		if ResourceLoader.exists(path):
+			return path
+		return ""
+	var cue := str(sfx.get("cue", "")).strip_edges()
+	if cue == "":
+		return ""
+	if cue.begins_with("res://") or cue.begins_with("user://"):
+		if ResourceLoader.exists(cue):
+			return cue
+		return ""
+	if DEFAULT_SE_CUE_PATHS.has(cue):
+		var mapped := str(DEFAULT_SE_CUE_PATHS[cue])
+		if ResourceLoader.exists(mapped):
+			return mapped
+	var cue_base := cue.get_basename()
+	for dir_path in SE_SEARCH_DIRS:
+		for ext in SE_SEARCH_EXTENSIONS:
+			var candidate := "%s/%s%s" % [dir_path, cue, ext]
+			if ResourceLoader.exists(candidate):
+				return candidate
+			var candidate_base := "%s/%s%s" % [dir_path, cue_base, ext]
+			if ResourceLoader.exists(candidate_base):
+				return candidate_base
+	return ""
 
 static func _play_sprite_sheet(effect_node: Node2D, vfx: Dictionary, scale_factor: float) -> bool:
 	var sheet_variant: Variant = vfx.get("sprite_sheet", {})
@@ -136,3 +223,13 @@ static func _schedule_cleanup(board: HexBoard, effect_node: Node2D, wait_sec: fl
 		if is_instance_valid(effect_node):
 			effect_node.queue_free()
 	)
+
+static func _deep_merge_dict(override: Dictionary, base: Dictionary) -> Dictionary:
+	var merged := base.duplicate(true)
+	for key in override.keys():
+		var value: Variant = override[key]
+		if value is Dictionary and merged.has(key) and merged[key] is Dictionary:
+			merged[key] = _deep_merge_dict(value as Dictionary, merged[key] as Dictionary)
+		else:
+			merged[key] = value
+	return merged

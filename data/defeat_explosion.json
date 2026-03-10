@@ -1,6 +1,6 @@
 {
 	"id": "defeat_explosion",
-	"trigger": "on_enemy_defeat",
+	"trigger": "on_unit_defeat",
 	"vfx": {
 		"type": "sprite_sheet",
 		"offset": [0, 1.0, 0],
