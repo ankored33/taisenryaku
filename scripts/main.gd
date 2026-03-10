@@ -69,7 +69,6 @@ var unit_hp_labels := {}
 var unit_moved_markers := {}
 var defeat_effect_config := {}
 var unit_action_menu_actions := {}
-var last_deployment_active := false
 var camera_controller: BattleCameraController
 var overlay_service := UnitOverlayService.new()
 var hud_controller: BattleHudController
@@ -165,8 +164,7 @@ func _ready() -> void:
 	_refresh_layout()
 	_apply_stage_initial_camera_if_needed()
 	_apply_battle_background()
-	_refresh_friendly_auto_ui_state()
-	last_deployment_active = bool(board.query_is_deployment_active())
+	_refresh_action_buttons_state()
 	_start_initial_deployment_phase_if_available()
 
 func _ensure_tile_info_label() -> void:
@@ -191,15 +189,7 @@ func _process(delta: float) -> void:
 	if next_pan != board_pan:
 		board_pan = next_pan
 		_apply_board_transform()
-	var deployment_active := bool(board.query_is_deployment_active())
-	if deployment_active != last_deployment_active:
-		last_deployment_active = deployment_active
-		_refresh_left_floating_action_buttons_visibility()
-		_refresh_end_turn_button_state()
-		if not deployment_active:
-			_fix_left_info_order()
 	_update_unit_hp_overlays()
-	_refresh_friendly_auto_ui_state()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
@@ -323,10 +313,9 @@ func _on_friendly_auto_button_pressed() -> void:
 	friendly_auto_confirm.popup_centered()
 
 func _on_friendly_auto_confirmed() -> void:
-	_refresh_end_turn_button_state()
+	_set_action_buttons_locked(true)
 	await board.run_current_faction_auto_actions()
-	_refresh_friendly_auto_ui_state()
-	_refresh_end_turn_button_state()
+	_refresh_action_buttons_state()
 
 func _on_attack_confirm_requested(text: String) -> void:
 	attack_confirm.dialog_text = text
@@ -349,8 +338,7 @@ func _on_move_cancel_canceled() -> void:
 	board.cancel_pending_move_cancel()
 
 func _on_turn_started(faction: String) -> void:
-	_refresh_left_floating_action_buttons_visibility()
-	_refresh_end_turn_button_state()
+	_refresh_action_buttons_state()
 	if board != null and bool(board.query_is_deployment_active()):
 		return
 	var ai_faction := str(board.get("ai_faction"))
@@ -371,7 +359,7 @@ func _on_turn_started(faction: String) -> void:
 	board.set_turn_start_pause(false)
 	if faction == ai_faction:
 		board.run_ai_turn_if_needed()
-	_refresh_friendly_auto_ui_state()
+	_refresh_action_buttons_state()
 
 func _on_transport_goal_reached(unit_name: String, score_delta: int, total_score: int) -> void:
 	var reached_victory := total_score >= transport_goal_victory_score
@@ -443,7 +431,21 @@ func _refresh_friendly_auto_ui_state() -> void:
 		friendly_auto_button.disabled = not can_use
 	if floating_friendly_auto_button != null:
 		floating_friendly_auto_button.disabled = not can_use
+
+func _refresh_action_buttons_state() -> void:
+	_refresh_left_floating_action_buttons_visibility()
+	_refresh_friendly_auto_ui_state()
 	_refresh_end_turn_button_state()
+
+func _set_action_buttons_locked(locked: bool) -> void:
+	if floating_end_turn_button != null:
+		floating_end_turn_button.disabled = locked
+	if end_turn_button != null:
+		end_turn_button.disabled = locked
+	if floating_friendly_auto_button != null:
+		floating_friendly_auto_button.disabled = locked
+	if friendly_auto_button != null:
+		friendly_auto_button.disabled = locked
 
 func _can_use_end_turn_button() -> bool:
 	if board == null:
@@ -492,9 +494,7 @@ func _setup_left_floating_action_buttons() -> void:
 	if not floating_friendly_auto_button.pressed.is_connected(_on_friendly_auto_button_pressed):
 		floating_friendly_auto_button.pressed.connect(_on_friendly_auto_button_pressed)
 	_layout_left_floating_action_buttons()
-	_refresh_left_floating_action_buttons_visibility()
-	_refresh_end_turn_button_state()
-	_refresh_friendly_auto_ui_state()
+	_refresh_action_buttons_state()
 
 func _layout_left_floating_action_buttons() -> void:
 	if floating_end_turn_button == null or floating_friendly_auto_button == null:
@@ -629,13 +629,13 @@ func _on_deployment_finished() -> void:
 		board.cmd_finish_initial_deployment_phase()
 		board.cmd_notify_turn_started()
 	_fix_left_info_order()
-	_refresh_left_floating_action_buttons_visibility()
-	_refresh_end_turn_button_state()
+	_refresh_action_buttons_state()
 
 func _start_initial_deployment_phase_if_available() -> void:
 	if board == null:
 		return
 	board.cmd_start_initial_deployment_phase()
+	_refresh_action_buttons_state()
 
 func _on_unit_action_menu_id_pressed(id: int) -> void:
 	if board == null:
