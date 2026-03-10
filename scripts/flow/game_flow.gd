@@ -90,93 +90,17 @@ func start_selected_stage(stage_index: int) -> bool:
 	return start_stage(selected_girl_id, stage_index)
 
 func select_stage_for_edit(stage_index: int) -> bool:
-	stage_select_notice = ""
-	if campaign_girls.is_empty():
-		_load_campaign_data()
-	var normalized := selected_girl_id.strip_edges().to_lower()
-	var idx := _find_girl_index(normalized)
-	if idx == -1:
-		stage_select_notice = "存在しないキャラクターです。"
-		return false
-	var stage_ids := _get_stage_ids(normalized)
-	if stage_index < 0 or stage_index >= stage_ids.size():
-		stage_select_notice = "存在しないステージです。"
-		return false
-	var stage_id := str(stage_ids[stage_index])
-	if stage_id == "":
-		stage_select_notice = "ステージIDが設定されていません。"
-		return false
-	if not _stage_file_exists(stage_id):
-		stage_select_notice = "このステージはまだ未実装です。"
-		return false
-	selected_stage_index = stage_index
-	current_stage_id = stage_id
-	_load_stage_data_by_id(stage_id)
-	if current_stage_data.is_empty():
-		stage_select_notice = "ステージデータの読み込みに失敗しました。"
-		return false
-	return true
+	return _prepare_stage_selection(selected_girl_id, stage_index)
 
 func debug_start_stage_battle(girl_id: String, stage_index: int) -> bool:
-	stage_select_notice = ""
-	if campaign_girls.is_empty():
-		_load_campaign_data()
-	if progress_unlocked.is_empty():
-		_load_progress()
-	var normalized := girl_id.strip_edges().to_lower()
-	var idx := _find_girl_index(normalized)
-	if idx == -1:
-		stage_select_notice = "存在しないキャラクターです。"
-		return false
-	var stage_ids := _get_stage_ids(normalized)
-	if stage_index < 0 or stage_index >= stage_ids.size():
-		stage_select_notice = "存在しないステージです。"
-		return false
-	var stage_id := str(stage_ids[stage_index])
-	if stage_id == "":
-		stage_select_notice = "ステージIDが設定されていません。"
-		return false
-	if not _stage_file_exists(stage_id):
-		stage_select_notice = "このステージはまだ未実装です。"
-		return false
-	selected_girl_id = normalized
-	selected_stage_index = stage_index
-	current_stage_id = stage_id
-	_load_stage_data_by_id(stage_id)
-	if current_stage_data.is_empty():
-		stage_select_notice = "ステージデータの読み込みに失敗しました。"
+	if not _prepare_stage_selection(girl_id, stage_index):
 		return false
 	last_battle_victory = true
 	_change_phase("battle")
 	return true
 
 func start_stage(girl_id: String, stage_index: int) -> bool:
-	stage_select_notice = ""
-	var normalized := girl_id.strip_edges().to_lower()
-	var idx := _find_girl_index(normalized)
-	if idx == -1:
-		stage_select_notice = "存在しないキャラクターです。"
-		return false
-	if not _is_stage_unlocked(normalized, stage_index):
-		stage_select_notice = "このステージは未開放です。"
-		return false
-	var stage_ids := _get_stage_ids(normalized)
-	if stage_index < 0 or stage_index >= stage_ids.size():
-		stage_select_notice = "存在しないステージです。"
-		return false
-	var stage_id := str(stage_ids[stage_index])
-	if stage_id == "":
-		stage_select_notice = "ステージIDが設定されていません。"
-		return false
-	if not _stage_file_exists(stage_id):
-		stage_select_notice = "このステージはまだ未実装です。"
-		return false
-	selected_girl_id = normalized
-	selected_stage_index = stage_index
-	current_stage_id = stage_id
-	_load_stage_data_by_id(stage_id)
-	if current_stage_data.is_empty():
-		stage_select_notice = "ステージデータの読み込みに失敗しました。"
+	if not _prepare_stage_selection(girl_id, stage_index, true):
 		return false
 	_change_phase("event_before")
 	return true
@@ -223,12 +147,7 @@ func update_current_stage_event_data(event_key: String, event_data: Dictionary) 
 	if key == "":
 		return false
 	current_stage_source_data[key] = _normalize_stage_event_data(event_data)
-	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
-	if file == null:
-		return false
-	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
-	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
-	return true
+	return _save_current_stage_source()
 
 func continue_from_event() -> void:
 	if current_phase == "event_before":
@@ -264,15 +183,11 @@ func play_battle_turn_bgm(turn_faction: String, ai_faction: String = "enemy") ->
 func update_current_stage_audio(audio_config: Dictionary) -> bool:
 	if current_stage_source_path == "":
 		return false
-	var normalized := _normalize_audio_config(audio_config)
-	current_stage_source_data["audio"] = normalized
-	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
-	if file == null:
-		return false
-	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
-	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
-	_play_phase_bgm(current_phase)
-	return true
+	current_stage_source_data["audio"] = _normalize_audio_config(audio_config)
+	var saved := _save_current_stage_source()
+	if saved:
+		_play_phase_bgm(current_phase)
+	return saved
 
 func update_current_stage_enemy_ai_production(unit_classes: Array, enabled: bool = true) -> bool:
 	if current_stage_source_path == "":
@@ -288,12 +203,7 @@ func update_current_stage_enemy_ai_production(unit_classes: Array, enabled: bool
 		current_stage_source_data.erase("ai_production")
 	else:
 		current_stage_source_data["ai_production"] = ai_production
-	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
-	if file == null:
-		return false
-	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
-	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
-	return true
+	return _save_current_stage_source()
 
 func _change_phase(next_phase: String) -> void:
 	current_phase = next_phase
@@ -309,6 +219,53 @@ func _change_phase(next_phase: String) -> void:
 		get_tree().call_deferred("change_scene_to_file", STAGE_SELECT_SCENE_PATH)
 		return
 	get_tree().call_deferred("change_scene_to_file", EVENT_SCENE_PATH)
+
+func _prepare_stage_selection(girl_id: String, stage_index: int, require_unlocked: bool = false) -> bool:
+	stage_select_notice = ""
+	if campaign_girls.is_empty():
+		_load_campaign_data()
+	if require_unlocked and progress_unlocked.is_empty():
+		_load_progress()
+	var normalized := girl_id.strip_edges().to_lower()
+	if _find_girl_index(normalized) == -1:
+		stage_select_notice = "存在しないキャラクターです。"
+		return false
+	if require_unlocked and not _is_stage_unlocked(normalized, stage_index):
+		stage_select_notice = "このステージは未開放です。"
+		return false
+	var stage_id := _get_stage_id_for_index(normalized, stage_index)
+	if stage_id == "":
+		return false
+	selected_girl_id = normalized
+	selected_stage_index = stage_index
+	current_stage_id = stage_id
+	_load_stage_data_by_id(stage_id)
+	if current_stage_data.is_empty():
+		stage_select_notice = "ステージデータの読み込みに失敗しました。"
+		return false
+	return true
+
+func _get_stage_id_for_index(girl_id: String, stage_index: int) -> String:
+	var stage_ids := _get_stage_ids(girl_id)
+	if stage_index < 0 or stage_index >= stage_ids.size():
+		stage_select_notice = "存在しないステージです。"
+		return ""
+	var stage_id := str(stage_ids[stage_index])
+	if stage_id == "":
+		stage_select_notice = "ステージIDが設定されていません。"
+		return ""
+	if not _stage_file_exists(stage_id):
+		stage_select_notice = "このステージはまだ未実装です。"
+		return ""
+	return stage_id
+
+func _save_current_stage_source() -> bool:
+	var file := FileAccess.open(current_stage_source_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(current_stage_source_data, "\t"))
+	current_stage_data = TiledStageLoader.apply_tiled_map(current_stage_source_data.duplicate(true), current_stage_source_path)
+	return true
 
 func _load_stage_data_by_id(stage_id: String) -> void:
 	if stage_id.strip_edges() == "":
