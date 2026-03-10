@@ -2,12 +2,19 @@
 	"id": "defeat_explosion",
 	"trigger": "on_enemy_defeat",
 	"vfx": {
+		"type": "sprite_sheet",
 		"offset": [0, 1.0, 0],
-		"scale": 1.0,
-		"lifetime_sec": 1.8,
-		"particle_count": 56,
-		"particle_speed_min": 70.0,
-		"particle_speed_max": 220.0
+		"scale": 0.66,
+		"lifetime_sec": 0.5,
+		"sprite_sheet": {
+			"texture": "res://assets/vfx/explosion_sheet.png",
+			"frame_width": 192,
+			"frame_height": 192,
+			"frames": 7,
+			"columns": 7,
+			"rows": 1,
+			"fps": 14
+		}
 	},
 	"sfx": {
 		"cue": "SE_Explosion_01",

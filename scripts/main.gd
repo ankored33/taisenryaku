@@ -24,6 +24,16 @@ const HP_OFFSET_FACTOR := Vector2(-0.70, 0.10)
 const MOVED_MARKER_OFFSET_FACTOR := Vector2(0.40, 0.25)
 const LEFT_FLOATING_BUTTON_HEIGHT := 34.0
 const LEFT_FLOATING_BUTTON_GAP := 8.0
+const DEFAULT_DEFEAT_SE_CUE_PATHS := {
+	"SE_Explosion_01": "res://assets/audio/se/SE_Explosion_01.ogg"
+}
+const DEFEAT_SE_SEARCH_DIRS := [
+	"res://assets/audio/se",
+	"res://assets/se",
+	"res://audio/se",
+	"res://audio"
+]
+const DEFEAT_SE_SEARCH_EXTENSIONS := [".ogg", ".wav", ".mp3"]
 
 @onready var board: HexBoard = $HexBoard
 @onready var left_panel: Control = $CanvasLayer/LeftPanel
@@ -323,8 +333,10 @@ func _on_friendly_auto_button_pressed() -> void:
 	friendly_auto_confirm.popup_centered()
 
 func _on_friendly_auto_confirmed() -> void:
+	_refresh_end_turn_button_state()
 	await board.run_current_faction_auto_actions()
 	_refresh_friendly_auto_ui_state()
+	_refresh_end_turn_button_state()
 
 func _on_attack_confirm_requested(text: String) -> void:
 	attack_confirm.dialog_text = text
@@ -403,9 +415,6 @@ func _on_board_unit_removed(payload: Dictionary) -> void:
 	var unit_variant: Variant = payload.get("unit", {})
 	if not (unit_variant is Dictionary):
 		return
-	var unit := unit_variant as Dictionary
-	if str(unit.get("faction", "")) != "enemy":
-		return
 	var local_position := Vector2.ZERO
 	var local_position_variant: Variant = payload.get("local_position", Vector2.ZERO)
 	if local_position_variant is Vector2:
@@ -422,12 +431,19 @@ func _load_defeat_effect_config() -> void:
 		"id": "defeat_explosion",
 		"trigger": "on_enemy_defeat",
 		"vfx": {
+			"type": "sprite_sheet",
 			"offset": [0, 1.0, 0],
-			"scale": 1.0,
-			"lifetime_sec": 1.8,
-			"particle_count": 56,
-			"particle_speed_min": 70.0,
-			"particle_speed_max": 220.0
+			"scale": 0.66,
+			"lifetime_sec": 0.5,
+			"sprite_sheet": {
+				"texture": "res://assets/vfx/explosion_sheet.png",
+				"frame_width": 192,
+				"frame_height": 192,
+				"frames": 7,
+				"columns": 7,
+				"rows": 1,
+				"fps": 14
+			}
 		},
 		"sfx": {
 			"cue": "",
@@ -438,6 +454,54 @@ func _load_defeat_effect_config() -> void:
 
 func _play_enemy_defeat_explosion(local_position: Vector2) -> void:
 	BattleDefeatEffectService.play_enemy_defeat_explosion(board, local_position, defeat_effect_config)
+	_play_defeat_se()
+
+func _play_defeat_se() -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager == null or not audio_manager.has_method("play_se"):
+		return
+	var sfx_variant: Variant = defeat_effect_config.get("sfx", {})
+	if not (sfx_variant is Dictionary):
+		return
+	var sfx := sfx_variant as Dictionary
+	var se_path := _resolve_defeat_se_path(sfx)
+	if se_path == "":
+		return
+	var volume_db := NAN
+	if sfx.has("volume_db"):
+		volume_db = float(sfx.get("volume_db", NAN))
+	elif sfx.has("volume"):
+		var linear := clampf(float(sfx.get("volume", 1.0)), 0.0, 2.0)
+		volume_db = linear_to_db(maxf(0.0001, linear))
+	audio_manager.play_se(se_path, volume_db)
+
+func _resolve_defeat_se_path(sfx: Dictionary) -> String:
+	var path := str(sfx.get("path", "")).strip_edges()
+	if path != "":
+		if ResourceLoader.exists(path):
+			return path
+		return ""
+	var cue := str(sfx.get("cue", "")).strip_edges()
+	if cue == "":
+		return ""
+	if cue.begins_with("res://") or cue.begins_with("user://"):
+		if ResourceLoader.exists(cue):
+			return cue
+		return ""
+	if DEFAULT_DEFEAT_SE_CUE_PATHS.has(cue):
+		var mapped := str(DEFAULT_DEFEAT_SE_CUE_PATHS[cue])
+		if ResourceLoader.exists(mapped):
+			return mapped
+	var cue_base := cue.get_basename()
+	for dir_path in DEFEAT_SE_SEARCH_DIRS:
+		for ext in DEFEAT_SE_SEARCH_EXTENSIONS:
+			var candidate := "%s/%s%s" % [dir_path, cue, ext]
+			if ResourceLoader.exists(candidate):
+				return candidate
+			var candidate_base := "%s/%s%s" % [dir_path, cue_base, ext]
+			if ResourceLoader.exists(candidate_base):
+				return candidate_base
+	return ""
 
 func _on_debug_victory_pressed() -> void:
 	_report_battle_result_once(true)
@@ -459,9 +523,12 @@ func _refresh_friendly_auto_ui_state() -> void:
 		friendly_auto_button.disabled = not can_use
 	if floating_friendly_auto_button != null:
 		floating_friendly_auto_button.disabled = not can_use
+	_refresh_end_turn_button_state()
 
 func _can_use_end_turn_button() -> bool:
 	if board == null:
+		return false
+	if bool(board.query_is_ai_running()):
 		return false
 	if bool(board.query_is_deployment_active()):
 		return false
