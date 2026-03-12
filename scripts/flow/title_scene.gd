@@ -3,6 +3,7 @@ extends Control
 @onready var start_button: Button = $Margin/VBox/Menu/StartButton
 @onready var continue_button: Button = $Margin/VBox/Menu/ContinueButton
 @onready var settings_button: Button = $Margin/VBox/Menu/SettingsButton
+@onready var debug_button: Button = $Margin/VBox/Menu/DebugButton
 @onready var quit_button: Button = $Margin/VBox/Menu/QuitButton
 @onready var settings_dialog: AcceptDialog = $SettingsDialog
 @onready var bgm_slider: HSlider = $SettingsDialog/Margin/VBox/BgmRow/BgmSlider
@@ -15,6 +16,7 @@ func _ready() -> void:
 	start_button.pressed.connect(_on_start_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	debug_button.pressed.connect(_on_debug_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	bgm_slider.value_changed.connect(_on_bgm_changed)
 	se_slider.value_changed.connect(_on_se_changed)
@@ -29,6 +31,10 @@ func _on_continue_pressed() -> void:
 
 func _on_settings_pressed() -> void:
 	settings_dialog.popup_centered(Vector2i(560, 300))
+
+func _on_debug_pressed() -> void:
+	if GameFlow.has_method("open_debug_menu"):
+		GameFlow.open_debug_menu()
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()

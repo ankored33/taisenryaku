@@ -66,6 +66,11 @@ layout_mode = 2
 custom_minimum_size = Vector2(360, 56)
 text = "設定"
 
+[node name="DebugButton" type="Button" parent="Margin/VBox/Menu"]
+layout_mode = 2
+custom_minimum_size = Vector2(360, 56)
+text = "デバッグ"
+
 [node name="QuitButton" type="Button" parent="Margin/VBox/Menu"]
 layout_mode = 2
 custom_minimum_size = Vector2(360, 56)

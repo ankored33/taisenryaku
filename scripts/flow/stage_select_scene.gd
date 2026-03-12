@@ -217,7 +217,7 @@ func _refresh_stage_overlay_list(target_stage_list: VBoxContainer) -> void:
 	for stage in stages:
 		var box := VBoxContainer.new()
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_theme_constant_override("separation", 4)
+		box.add_theme_constant_override("separation", 0)
 		target_stage_list.add_child(box)
 
 		var index := int(stage.get("index", 0))
@@ -231,25 +231,6 @@ func _refresh_stage_overlay_list(target_stage_list: VBoxContainer) -> void:
 		start_button.disabled = not unlocked or not exists
 		start_button.pressed.connect(_on_stage_pressed.bind(index))
 		box.add_child(start_button)
-
-		var action_row := HBoxContainer.new()
-		action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		action_row.add_theme_constant_override("separation", 6)
-		box.add_child(action_row)
-
-		var edit_button := Button.new()
-		edit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		edit_button.text = "イベント"
-		edit_button.disabled = not exists
-		edit_button.pressed.connect(_on_stage_event_edit_pressed.bind(index))
-		action_row.add_child(edit_button)
-
-		var stage_editor_button := Button.new()
-		stage_editor_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		stage_editor_button.text = "ステージ"
-		stage_editor_button.disabled = not exists
-		stage_editor_button.pressed.connect(_on_stage_editor_pressed.bind(index))
-		action_row.add_child(stage_editor_button)
 
 func _build_stage_label(index: int, unlocked: bool, cleared: bool, exists: bool) -> String:
 	var status := "LOCK"

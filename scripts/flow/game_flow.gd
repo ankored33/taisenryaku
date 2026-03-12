@@ -3,6 +3,7 @@ extends Node
 const EVENT_SCENE_PATH := "res://scenes/flow/event_scene.tscn"
 const PREP_SCENE_PATH := "res://scenes/flow/prep_scene.tscn"
 const STAGE_SELECT_SCENE_PATH := "res://scenes/flow/stage_select_scene.tscn"
+const DEBUG_STAGE_SCENE_PATH := "res://scenes/flow/stage_debug_scene.tscn"
 const TiledStageLoader = preload("res://scripts/data/tiled_stage_loader.gd")
 const CAMPAIGN_DATA_PATH := "res://data/campaign.json"
 const PROGRESSION_PATH := "user://campaign_progress.json"
@@ -86,6 +87,9 @@ func select_girl(girl_id: String) -> bool:
 func get_selected_girl_stages() -> Array[Dictionary]:
 	return _build_stage_entries(selected_girl_id)
 
+func get_girl_stages(girl_id: String) -> Array[Dictionary]:
+	return _build_stage_entries(girl_id.strip_edges().to_lower())
+
 func get_stage_select_notice() -> String:
 	return stage_select_notice
 
@@ -107,6 +111,14 @@ func start_stage(girl_id: String, stage_index: int) -> bool:
 		return false
 	_change_phase("event_before")
 	return true
+
+func open_debug_menu() -> void:
+	if campaign_girls.is_empty():
+		_load_campaign_data()
+	if progress_unlocked.is_empty():
+		_load_progress()
+	stage_select_notice = ""
+	_change_phase("debug_stage")
 
 func get_current_stage_audio_config() -> Dictionary:
 	return _normalize_audio_config(_get_audio_config())
@@ -220,6 +232,9 @@ func _change_phase(next_phase: String) -> void:
 		return
 	if next_phase == "stage_select":
 		get_tree().call_deferred("change_scene_to_file", STAGE_SELECT_SCENE_PATH)
+		return
+	if next_phase == "debug_stage":
+		get_tree().call_deferred("change_scene_to_file", DEBUG_STAGE_SCENE_PATH)
 		return
 	get_tree().call_deferred("change_scene_to_file", EVENT_SCENE_PATH)
 
