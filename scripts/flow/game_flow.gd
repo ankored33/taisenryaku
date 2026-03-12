@@ -54,11 +54,14 @@ func get_campaign_girls() -> Array[Dictionary]:
 	for girl in campaign_girls:
 		var girl_id := str(girl.get("id", ""))
 		var stage_count := _get_stage_count(girl_id)
+		var unlocked_count := _get_unlocked_count(girl_id)
+		var portrait := _resolve_girl_portrait(girl_id, girl)
 		result.append({
 			"id": girl_id,
 			"name": str(girl.get("name", girl_id)),
+			"portrait": portrait,
 			"stage_count": stage_count,
-			"unlocked_count": _get_unlocked_count(girl_id)
+			"unlocked_count": unlocked_count
 		})
 	return result
 
@@ -309,7 +312,9 @@ func _load_campaign_data() -> void:
 			campaign_girls.append({
 				"id": girl_id,
 				"name": str(raw.get("name", girl_id)),
-				"stages": stages
+				"stages": stages,
+				"portrait": str(raw.get("portrait", "")).strip_edges(),
+				"portraits": _normalize_portraits(raw.get("portraits", {}))
 			})
 	if campaign_girls.is_empty():
 		var fallback := _default_campaign_data()
@@ -325,17 +330,37 @@ func _default_campaign_data() -> Dictionary:
 			{
 				"id": "girl_a",
 				"name": "ガールA",
-				"stages": ["stage_01", "girl_a_02", "girl_a_03", "girl_a_04", "girl_a_05"]
+				"stages": ["stage_01", "girl_a_02"],
+				"portrait": "",
+				"portraits": {"tier1": "", "tier2": "", "tier3": ""}
 			},
 			{
 				"id": "girl_b",
 				"name": "ガールB",
-				"stages": ["girl_b_01", "girl_b_02", "girl_b_03", "girl_b_04", "girl_b_05"]
+				"stages": ["girl_b_01", "girl_b_02"],
+				"portrait": "",
+				"portraits": {"tier1": "", "tier2": "", "tier3": ""}
 			},
 			{
 				"id": "girl_c",
 				"name": "ガールC",
-				"stages": ["girl_c_01", "girl_c_02", "girl_c_03", "girl_c_04", "girl_c_05"]
+				"stages": ["girl_c_01", "girl_c_02"],
+				"portrait": "",
+				"portraits": {"tier1": "", "tier2": "", "tier3": ""}
+			},
+			{
+				"id": "girl_d",
+				"name": "ガールD",
+				"stages": ["girl_d_01", "girl_d_02"],
+				"portrait": "",
+				"portraits": {"tier1": "", "tier2": "", "tier3": ""}
+			},
+			{
+				"id": "girl_e",
+				"name": "ガールE",
+				"stages": ["girl_e_01", "girl_e_02"],
+				"portrait": "",
+				"portraits": {"tier1": "", "tier2": "", "tier3": ""}
 			}
 		]
 	}
@@ -427,6 +452,47 @@ func _get_stage_ids(girl_id: String) -> Array[String]:
 
 func _get_stage_count(girl_id: String) -> int:
 	return _get_stage_ids(girl_id).size()
+
+func _get_cleared_count(girl_id: String) -> int:
+	var flags_variant: Variant = progress_cleared.get(girl_id, [])
+	if not (flags_variant is Array):
+		return 0
+	var count := 0
+	for flag in (flags_variant as Array):
+		if bool(flag):
+			count += 1
+	return count
+
+func _resolve_girl_portrait(girl_id: String, girl: Dictionary) -> String:
+	var fallback := str(girl.get("portrait", "")).strip_edges()
+	var portraits := _normalize_portraits(girl.get("portraits", {}))
+	var stage_count := _get_stage_count(girl_id)
+	var unlocked_count := _get_unlocked_count(girl_id)
+	var cleared_count := _get_cleared_count(girl_id)
+	var tier_key := "tier1"
+	if stage_count > 0 and cleared_count >= stage_count:
+		tier_key = "tier3"
+	elif unlocked_count >= mini(stage_count, 2):
+		tier_key = "tier2"
+	var selected := str(portraits.get(tier_key, "")).strip_edges()
+	if selected != "":
+		return selected
+	if tier_key == "tier3":
+		selected = str(portraits.get("tier2", "")).strip_edges()
+		if selected != "":
+			return selected
+	selected = str(portraits.get("tier1", "")).strip_edges()
+	if selected != "":
+		return selected
+	return fallback
+
+func _normalize_portraits(raw: Variant) -> Dictionary:
+	var src: Dictionary = raw if raw is Dictionary else {}
+	return {
+		"tier1": str(src.get("tier1", "")).strip_edges(),
+		"tier2": str(src.get("tier2", "")).strip_edges(),
+		"tier3": str(src.get("tier3", "")).strip_edges()
+	}
 
 func _get_unlocked_count(girl_id: String) -> int:
 	var stage_count := _get_stage_count(girl_id)

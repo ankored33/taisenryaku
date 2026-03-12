@@ -29,31 +29,20 @@ theme_override_constants/margin_bottom = 24
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+size_flags_vertical = 3
+theme_override_constants/separation = 16
 
 [node name="Title" type="Label" parent="Margin/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
 text = "キャラクター / ステージ選択"
 
-[node name="GirlRow" type="HBoxContainer" parent="Margin/VBox"]
+[node name="CharacterScroll" type="ScrollContainer" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 10
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 0
 
-[node name="GirlLabel" type="Label" parent="Margin/VBox/GirlRow"]
-layout_mode = 2
-text = "対象:"
-
-[node name="GirlOption" type="OptionButton" parent="Margin/VBox/GirlRow"]
+[node name="CharacterRow" type="HBoxContainer" parent="Margin/VBox/CharacterScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="StageList" type="VBoxContainer" parent="Margin/VBox"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 8
-
-[node name="Info" type="Label" parent="Margin/VBox"]
-layout_mode = 2
-text = "..."
-autowrap_mode = 2
+theme_override_constants/separation = 12

@@ -3,34 +3,71 @@
 		{
 			"id": "girl_a",
 			"name": "ガールA",
+			"portrait": "res://assets/images/characters/girl_a_tier1.png",
+			"portraits": {
+				"tier1": "res://assets/images/characters/girl_a_tier1.png",
+				"tier2": "res://assets/images/characters/girl_a_tier2.png",
+				"tier3": "res://assets/images/characters/girl_a_tier3.png"
+			},
 			"stages": [
 				"stage_01",
-				"girl_a_02",
-				"girl_a_03",
-				"girl_a_04",
-				"girl_a_05"
+				"girl_a_02"
 			]
 		},
 		{
 			"id": "girl_b",
 			"name": "ガールB",
+			"portrait": "res://assets/images/characters/girl_b_tier1.png",
+			"portraits": {
+				"tier1": "res://assets/images/characters/girl_b_tier1.png",
+				"tier2": "res://assets/images/characters/girl_b_tier2.png",
+				"tier3": "res://assets/images/characters/girl_b_tier3.png"
+			},
 			"stages": [
 				"girl_b_01",
-				"girl_b_02",
-				"girl_b_03",
-				"girl_b_04",
-				"girl_b_05"
+				"girl_b_02"
 			]
 		},
 		{
 			"id": "girl_c",
 			"name": "ガールC",
+			"portrait": "res://assets/images/characters/girl_c_tier1.png",
+			"portraits": {
+				"tier1": "res://assets/images/characters/girl_c_tier1.png",
+				"tier2": "res://assets/images/characters/girl_c_tier2.png",
+				"tier3": "res://assets/images/characters/girl_c_tier3.png"
+			},
 			"stages": [
 				"girl_c_01",
-				"girl_c_02",
-				"girl_c_03",
-				"girl_c_04",
-				"girl_c_05"
+				"girl_c_02"
+			]
+		},
+		{
+			"id": "girl_d",
+			"name": "ガールD",
+			"portrait": "res://assets/images/characters/girl_d_tier1.png",
+			"portraits": {
+				"tier1": "res://assets/images/characters/girl_d_tier1.png",
+				"tier2": "res://assets/images/characters/girl_d_tier2.png",
+				"tier3": "res://assets/images/characters/girl_d_tier3.png"
+			},
+			"stages": [
+				"girl_d_01",
+				"girl_d_02"
+			]
+		},
+		{
+			"id": "girl_e",
+			"name": "ガールE",
+			"portrait": "res://assets/images/characters/girl_e_tier1.png",
+			"portraits": {
+				"tier1": "res://assets/images/characters/girl_e_tier1.png",
+				"tier2": "res://assets/images/characters/girl_e_tier2.png",
+				"tier3": "res://assets/images/characters/girl_e_tier3.png"
+			},
+			"stages": [
+				"girl_e_01",
+				"girl_e_02"
 			]
 		}
 	]
