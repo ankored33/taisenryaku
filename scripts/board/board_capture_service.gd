@@ -114,7 +114,7 @@ static func try_execute_capture(board: HexBoard, unit_idx: int) -> bool:
 	board.units[unit_idx][UnitState.ATTACKED] = true
 	board.action_sequence += 1
 	board.cmd_clear_pending_attack()
-	board.cmd_clear_pending_move_cancel()
+	board.cmd_clear_pending_move_confirmation()
 	board.cmd_clear_last_move_record()
 	board.cmd_update_status("%s が拠点 (%d,%d) を占領しました。" % [unit_name, tile.x, tile.y])
 	board.cmd_update_unit_info(board.units[unit_idx])

@@ -13,8 +13,8 @@ static func handle_click(board: HexBoard, tile: Vector2i) -> void:
 	if board.query_has_pending_attack():
 		board.cmd_update_status("先に攻撃確認を完了してください。")
 		return
-	if board.query_has_pending_move_cancel():
-		board.cmd_update_status("先に移動取り消し確認を完了してください。")
+	if board.query_has_pending_move_confirmation():
+		board.cmd_update_status("先に移動確認を完了してください。")
 		return
 	var target_idx = board.query_unit_at(tile)
 	if target_idx != -1:
@@ -176,13 +176,4 @@ static func _handle_move_mode_click(
 		board.cmd_update_status("%s はこのターンすでに移動済みです。" % selected[UnitState.NAME])
 		board.cmd_update_unit_info(selected)
 		return
-	var move_result := board.cmd_execute_unit_move(selected_idx, tile)
-	var awarded := bool(move_result.get("awarded", false))
-	board.cmd_set_unit_action_mode("")
-	if not awarded and selected_idx >= 0 and selected_idx < board.query_unit_count():
-		board.cmd_update_status("ユニットを移動しました。")
-		board.cmd_update_unit_info(board.query_unit(selected_idx))
-		board.cmd_request_unit_action_menu(selected_idx, true)
-	elif not awarded:
-		board.cmd_update_status("ユニットを移動しました。")
-		board.cmd_clear_unit_info()
+	board.cmd_request_move_confirmation(selected_idx, tile)

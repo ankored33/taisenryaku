@@ -62,7 +62,7 @@ var status_label: Label
 var unit_info_label: Label
 var tile_info_label: Label
 var attack_confirm_handler: Callable
-var move_cancel_confirm_handler: Callable
+var move_confirm_handler: Callable
 var unit_action_menu_handler: Callable
 var turn_start_handler: Callable
 var runtime_state := BoardRuntimeState.new(
@@ -125,11 +125,16 @@ var pending_production_tile: Vector2i:
 		return runtime_state.pending_production_tile
 	set(value):
 		runtime_state.pending_production_tile = value
-var pending_move_cancel_unit_id: String:
+var pending_move_confirm_unit_idx: int:
 	get:
-		return runtime_state.pending_move_cancel_unit_id
+		return runtime_state.pending_move_confirm_unit_idx
 	set(value):
-		runtime_state.pending_move_cancel_unit_id = value
+		runtime_state.pending_move_confirm_unit_idx = value
+var pending_move_confirm_target_tile: Vector2i:
+	get:
+		return runtime_state.pending_move_confirm_target_tile
+	set(value):
+		runtime_state.pending_move_confirm_target_tile = value
 var last_move_unit_id: String:
 	get:
 		return runtime_state.last_move_unit_id
@@ -365,8 +370,8 @@ func bind_ui(turn: Label, status: Label, unit_info: Label, tile_info: Label = nu
 func set_attack_confirm_handler(handler: Callable) -> void:
 	attack_confirm_handler = handler
 
-func set_move_cancel_confirm_handler(handler: Callable) -> void:
-	move_cancel_confirm_handler = handler
+func set_move_confirm_handler(handler: Callable) -> void:
+	move_confirm_handler = handler
 
 func set_unit_action_menu_handler(handler: Callable) -> void:
 	unit_action_menu_handler = handler
@@ -493,7 +498,7 @@ func load_units(json_path: String) -> void:
 	BoardVisibilityService.recompute_visibility_on_board(self)
 	BoardTurnService.reset_turn_action_flags(self, current_faction)
 	_clear_pending_attack()
-	_clear_pending_move_cancel()
+	_clear_pending_move_confirmation()
 	_clear_last_move_record()
 	unit_action_mode = ""
 	queue_redraw()
@@ -684,8 +689,8 @@ func _handle_click(tile: Vector2i) -> void:
 func query_has_pending_attack() -> bool:
 	return _has_pending_attack()
 
-func query_has_pending_move_cancel() -> bool:
-	return _has_pending_move_cancel()
+func query_has_pending_move_confirmation() -> bool:
+	return _has_pending_move_confirmation()
 
 func query_unit_at(tile: Vector2i) -> int:
 	return _unit_at(tile)
@@ -791,17 +796,14 @@ func cmd_update_unit_info(unit: Dictionary) -> void:
 func cmd_clear_unit_info() -> void:
 	_clear_unit_info()
 
-func query_can_offer_move_cancel(unit_idx: int) -> bool:
-	return _can_offer_move_cancel(unit_idx)
-
 func query_can_unit_capture_on_current_tile(unit_idx: int) -> bool:
 	return BoardCaptureService.can_unit_capture_on_current_tile(self, unit_idx)
 
 func query_can_open_production_menu(tile: Vector2i) -> bool:
 	return _can_open_production_menu(tile)
 
-func cmd_request_move_cancel_confirmation(unit_idx: int) -> void:
-	_request_move_cancel_confirmation(unit_idx)
+func cmd_request_move_confirmation(unit_idx: int, target_tile: Vector2i) -> void:
+	_request_move_confirmation(unit_idx, target_tile)
 
 func cmd_request_attack_confirmation(attacker_idx: int, defender_idx: int, distance: int) -> void:
 	_request_attack_confirmation(attacker_idx, defender_idx, distance)
@@ -844,7 +846,7 @@ func cmd_execute_unit_move(unit_idx: int, target_tile: Vector2i) -> Dictionary:
 			revealed_new_enemy = true
 			break
 	_set_last_move_record(moved_unit_id, start_tile, target_tile, revealed_new_enemy)
-	_clear_pending_move_cancel()
+	_clear_pending_move_confirmation()
 	var awarded := _try_award_transport_goal(unit_idx)
 	queue_redraw()
 	return {
@@ -853,8 +855,8 @@ func cmd_execute_unit_move(unit_idx: int, target_tile: Vector2i) -> Dictionary:
 		"revealed_new_enemy": revealed_new_enemy
 	}
 
-func cmd_clear_pending_move_cancel() -> void:
-	_clear_pending_move_cancel()
+func cmd_clear_pending_move_confirmation() -> void:
+	_clear_pending_move_confirmation()
 
 func cmd_set_unit_action_mode(mode: String) -> void:
 	unit_action_mode = mode.strip_edges().to_lower()
@@ -903,12 +905,6 @@ func cmd_request_unit_action_menu(unit_idx: int, after_move: bool = false) -> vo
 	var attacked := bool(unit.get(UnitState.ATTACKED, false))
 	var can_show_attack := has_attack_target and can_attack and not attacked
 	if after_move:
-		if _can_offer_move_cancel(unit_idx):
-			items.append({
-				"action": "cancel_move",
-				"label": "移動キャンセル",
-				"disabled": false
-			})
 		if can_show_attack:
 			items.append({
 				"action": "attack",
@@ -1011,15 +1007,6 @@ func cmd_choose_unit_action(action: String) -> void:
 		unit_action_mode = ""
 		BoardCaptureService.try_execute_capture(self, selected_unit_idx)
 		queue_redraw()
-		return
-	if key == "cancel_move":
-		unit_action_mode = ""
-		queue_redraw()
-		if _can_offer_move_cancel(selected_unit_idx):
-			_request_move_cancel_confirmation(selected_unit_idx)
-		else:
-			_update_status("このユニットは移動キャンセルできません。")
-			_update_unit_info(unit)
 		return
 	unit_action_mode = ""
 	_update_status(_selected_text(unit))
@@ -1195,7 +1182,7 @@ func run_current_faction_auto_actions() -> void:
 	var faction := current_faction
 	selected_unit_idx = -1
 	_clear_pending_attack()
-	_clear_pending_move_cancel()
+	_clear_pending_move_confirmation()
 	_clear_last_move_record()
 	unit_action_mode = ""
 	_update_status("%s の未行動ユニットを自動行動中..." % faction.to_upper())
@@ -1272,63 +1259,71 @@ func _request_attack_confirmation(attacker_idx: int, defender_idx: int, distance
 	else:
 		confirm_pending_attack()
 
-func confirm_pending_move_cancel() -> void:
-	if not _has_pending_move_cancel():
+func confirm_pending_move() -> void:
+	if not _has_pending_move_confirmation():
 		return
-	var unit_id := pending_move_cancel_unit_id
-	_clear_pending_move_cancel()
-	var unit_idx := _unit_index_by_id(unit_id)
-	if unit_idx == -1:
-		_update_status("移動取り消しは無効になりました。")
-		return
-	if not _can_offer_move_cancel(unit_idx):
-		_update_status("移動取り消しは実行できません。")
-		return
-	_move_unit_to(unit_idx, last_move_from)
-	units[unit_idx][UnitState.MOVED] = false
-	selected_unit_idx = unit_idx
-	queue_redraw()
-	_update_status("移動を取り消しました。")
-	_update_unit_info(units[unit_idx])
-	_clear_last_move_record()
-
-func cancel_pending_move_cancel() -> void:
-	if not _has_pending_move_cancel():
-		return
-	_clear_pending_move_cancel()
-	_update_status("移動取り消しを中止しました。")
-
-func _request_move_cancel_confirmation(unit_idx: int) -> void:
-	var unit := units[unit_idx]
-	var unit_id := str(unit.get(UnitState.ID, ""))
-	pending_move_cancel_unit_id = unit_id
-	var text := "%s の移動を取り消しますか？" % str(unit.get(UnitState.NAME, "?"))
-	_update_status(text)
-	if move_cancel_confirm_handler.is_valid():
-		move_cancel_confirm_handler.call(text)
-	else:
-		confirm_pending_move_cancel()
-
-func _can_offer_move_cancel(unit_idx: int) -> bool:
+	var unit_idx := pending_move_confirm_unit_idx
+	var target_tile := pending_move_confirm_target_tile
+	_clear_pending_move_confirmation()
 	if unit_idx < 0 or unit_idx >= units.size():
-		return false
+		_update_status("移動確認は無効になりました。")
+		return
 	var unit := units[unit_idx]
+	var unit_name := str(unit.get(UnitState.NAME, "?"))
 	if str(unit.get(UnitState.FACTION, "")) != current_faction:
-		return false
-	if not bool(unit.get(UnitState.MOVED, false)):
-		return false
+		_update_status("移動確認は無効になりました。")
+		return
 	if bool(unit.get(UnitState.ATTACKED, false)):
-		return false
-	var unit_id := str(unit.get(UnitState.ID, ""))
-	if unit_id == "" or unit_id != last_move_unit_id:
-		return false
-	if action_sequence != last_move_action_sequence:
-		return false
-	if _to_vec2i(unit.get(UnitState.POS, Vector2i.ZERO)) != last_move_to:
-		return false
-	if last_move_revealed_new_enemy:
-		return false
-	return true
+		_update_status("%s はこのターンすでに攻撃済みのため移動できません。" % unit_name)
+		_update_unit_info(unit)
+		return
+	if bool(unit.get(UnitState.MOVED, false)):
+		_update_status("%s はこのターンすでに移動済みです。" % unit_name)
+		_update_unit_info(unit)
+		return
+	if not _can_move_unit_to(unit_idx, target_tile):
+		_update_status("その場所には移動できません。")
+		_update_unit_info(unit)
+		return
+	selected_unit_idx = unit_idx
+	unit_action_mode = ""
+	var move_result := cmd_execute_unit_move(unit_idx, target_tile)
+	var moved := bool(move_result.get("moved", false))
+	if not moved:
+		_update_status("移動は実行されませんでした。")
+		_update_unit_info(unit)
+		queue_redraw()
+		return
+	var awarded := bool(move_result.get("awarded", false))
+	if not awarded and unit_idx >= 0 and unit_idx < units.size():
+		_update_status("ユニットを移動しました。")
+		_update_unit_info(units[unit_idx])
+		cmd_request_unit_action_menu(unit_idx, true)
+	elif not awarded:
+		_update_status("ユニットを移動しました。")
+		_clear_unit_info()
+
+func cancel_pending_move() -> void:
+	if not _has_pending_move_confirmation():
+		return
+	_clear_pending_move_confirmation()
+	_update_status("移動を中止しました。移動先を選択してください。")
+
+func _request_move_confirmation(unit_idx: int, target_tile: Vector2i) -> void:
+	if unit_idx < 0 or unit_idx >= units.size():
+		return
+	if not _is_valid_hex(target_tile):
+		return
+	pending_move_confirm_unit_idx = unit_idx
+	pending_move_confirm_target_tile = target_tile
+	var unit := units[unit_idx]
+	var unit_name := str(unit.get(UnitState.NAME, "?"))
+	var text := "%s を (%d, %d) へ移動します。実行しますか？" % [unit_name, target_tile.x, target_tile.y]
+	_update_status(text)
+	if move_confirm_handler.is_valid():
+		move_confirm_handler.call(text)
+	else:
+		confirm_pending_move()
 
 func _has_pending_attack() -> bool:
 	return pending_attack_attacker_idx != -1 and pending_attack_defender_idx != -1
@@ -1338,11 +1333,12 @@ func _clear_pending_attack() -> void:
 	pending_attack_defender_idx = -1
 	pending_attack_distance = -1
 
-func _has_pending_move_cancel() -> bool:
-	return pending_move_cancel_unit_id != ""
+func _has_pending_move_confirmation() -> bool:
+	return pending_move_confirm_unit_idx >= 0 and _is_valid_hex(pending_move_confirm_target_tile)
 
-func _clear_pending_move_cancel() -> void:
-	pending_move_cancel_unit_id = ""
+func _clear_pending_move_confirmation() -> void:
+	pending_move_confirm_unit_idx = -1
+	pending_move_confirm_target_tile = Vector2i(-1, -1)
 
 func _set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_enemy: bool = false) -> void:
 	last_move_unit_id = unit_id
@@ -1625,7 +1621,7 @@ func _try_award_transport_goal(unit_idx: int) -> bool:
 		delivered_transport_ids[unit_id] = true
 	_remove_unit_at(unit_idx, "transport_goal")
 	_clear_pending_attack()
-	_clear_pending_move_cancel()
+	_clear_pending_move_confirmation()
 	_clear_last_move_record()
 	selected_unit_idx = -1
 	unit_action_mode = ""

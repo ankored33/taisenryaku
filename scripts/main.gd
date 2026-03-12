@@ -40,7 +40,7 @@ const LEFT_FLOATING_BUTTON_GAP := 8.0
 @onready var end_turn_confirm: ConfirmationDialog = $CanvasLayer/EndTurnConfirm
 @onready var friendly_auto_confirm: ConfirmationDialog = get_node_or_null("CanvasLayer/FriendlyAutoConfirm") as ConfirmationDialog
 @onready var attack_confirm: ConfirmationDialog = $CanvasLayer/AttackConfirm
-@onready var move_cancel_confirm: ConfirmationDialog = $CanvasLayer/MoveCancelConfirm
+@onready var move_confirm: ConfirmationDialog = $CanvasLayer/MoveCancelConfirm
 @onready var unit_action_menu: PopupMenu = get_node_or_null("CanvasLayer/UnitActionMenu") as PopupMenu
 @onready var unit_info_popup: AcceptDialog = get_node_or_null("CanvasLayer/UnitInfoPopup") as AcceptDialog
 @onready var turn_start_dialog: AcceptDialog = get_node_or_null("CanvasLayer/TurnStartDialog") as AcceptDialog
@@ -96,7 +96,7 @@ func _ready() -> void:
 	_apply_stage_map_settings()
 	board.bind_ui(turn_label, status_label, unit_info_label, tile_info_label)
 	board.set_attack_confirm_handler(_on_attack_confirm_requested)
-	board.set_move_cancel_confirm_handler(_on_move_cancel_confirm_requested)
+	board.set_move_confirm_handler(_on_move_confirm_requested)
 	board.set_unit_action_menu_handler(_on_unit_action_menu_requested)
 	board.set_turn_start_handler(_on_turn_started)
 	board.set_battle_sequence_handler(_on_battle_sequence_requested)
@@ -150,8 +150,8 @@ func _ready() -> void:
 		friendly_auto_confirm.confirmed.connect(_on_friendly_auto_confirmed)
 	attack_confirm.confirmed.connect(_on_attack_confirmed)
 	attack_confirm.canceled.connect(_on_attack_canceled)
-	move_cancel_confirm.confirmed.connect(_on_move_cancel_confirmed)
-	move_cancel_confirm.canceled.connect(_on_move_cancel_canceled)
+	move_confirm.confirmed.connect(_on_move_confirmed)
+	move_confirm.canceled.connect(_on_move_canceled)
 	if turn_start_dialog != null:
 		turn_start_dialog.get_ok_button().hide()
 	if transport_goal_dialog != null:
@@ -327,15 +327,16 @@ func _on_attack_confirmed() -> void:
 func _on_attack_canceled() -> void:
 	board.cancel_pending_attack()
 
-func _on_move_cancel_confirm_requested(text: String) -> void:
-	move_cancel_confirm.dialog_text = text
-	move_cancel_confirm.popup_centered()
+func _on_move_confirm_requested(text: String) -> void:
+	move_confirm.title = "移動確認"
+	move_confirm.dialog_text = text
+	move_confirm.popup_centered()
 
-func _on_move_cancel_confirmed() -> void:
-	board.confirm_pending_move_cancel()
+func _on_move_confirmed() -> void:
+	board.confirm_pending_move()
 
-func _on_move_cancel_canceled() -> void:
-	board.cancel_pending_move_cancel()
+func _on_move_canceled() -> void:
+	board.cancel_pending_move()
 
 func _on_turn_started(faction: String) -> void:
 	_refresh_action_buttons_state()
