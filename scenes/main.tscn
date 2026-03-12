@@ -75,5 +75,5 @@ title = "攻撃"
 dialog_text = "攻撃を実行しますか？"
 
 [node name="MoveCancelConfirm" type="ConfirmationDialog" parent="CanvasLayer"]
-title = "移動取り消し"
-dialog_text = "この移動を取り消しますか？"
+title = "移動確認"
+dialog_text = "この移動を実行しますか？"

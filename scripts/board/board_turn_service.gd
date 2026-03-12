@@ -18,7 +18,6 @@ static func end_turn(board: HexBoard) -> void:
 	board.cmd_clear_pending_attack()
 	board.cmd_clear_pending_move_confirmation()
 	board.cmd_clear_pending_production()
-	board.cmd_clear_last_move_record()
 	board.cmd_reset_turn_action_flags(board.current_faction)
 	board.queue_redraw()
 	board.cmd_update_turn_label()

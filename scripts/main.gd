@@ -320,23 +320,29 @@ func _on_friendly_auto_confirmed() -> void:
 func _on_attack_confirm_requested(text: String) -> void:
 	attack_confirm.dialog_text = text
 	attack_confirm.popup_centered()
+	_refresh_action_buttons_state()
 
 func _on_attack_confirmed() -> void:
 	board.confirm_pending_attack()
+	_refresh_action_buttons_state()
 
 func _on_attack_canceled() -> void:
 	board.cancel_pending_attack()
+	_refresh_action_buttons_state()
 
 func _on_move_confirm_requested(text: String) -> void:
 	move_confirm.title = "移動確認"
 	move_confirm.dialog_text = text
 	move_confirm.popup_centered()
+	_refresh_action_buttons_state()
 
 func _on_move_confirmed() -> void:
 	board.confirm_pending_move()
+	_refresh_action_buttons_state()
 
 func _on_move_canceled() -> void:
 	board.cancel_pending_move()
+	_refresh_action_buttons_state()
 
 func _on_turn_started(faction: String) -> void:
 	_refresh_action_buttons_state()
@@ -452,6 +458,8 @@ func _can_use_end_turn_button() -> bool:
 	if board == null:
 		return false
 	if bool(board.query_is_ai_running()):
+		return false
+	if bool(board.query_has_pending_attack()) or bool(board.query_has_pending_move_confirmation()):
 		return false
 	if bool(board.query_is_deployment_active()):
 		return false

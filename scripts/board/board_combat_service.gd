@@ -43,7 +43,6 @@ static func resolve_attack(board: HexBoard, attacker_idx: int, defender_idx: int
 	attacker.set_moved(true)
 	attacker.set_attacked(true)
 	board.action_sequence += 1
-	board.cmd_clear_last_move_record()
 	events.append("%s が %s に %d ダメージ" % [attacker_name, defender_name, damage])
 
 	if defender.hp() <= 0:

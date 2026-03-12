@@ -135,31 +135,6 @@ var pending_move_confirm_target_tile: Vector2i:
 		return runtime_state.pending_move_confirm_target_tile
 	set(value):
 		runtime_state.pending_move_confirm_target_tile = value
-var last_move_unit_id: String:
-	get:
-		return runtime_state.last_move_unit_id
-	set(value):
-		runtime_state.last_move_unit_id = value
-var last_move_from: Vector2i:
-	get:
-		return runtime_state.last_move_from
-	set(value):
-		runtime_state.last_move_from = value
-var last_move_to: Vector2i:
-	get:
-		return runtime_state.last_move_to
-	set(value):
-		runtime_state.last_move_to = value
-var last_move_action_sequence: int:
-	get:
-		return runtime_state.last_move_action_sequence
-	set(value):
-		runtime_state.last_move_action_sequence = value
-var last_move_revealed_new_enemy: bool:
-	get:
-		return runtime_state.last_move_revealed_new_enemy
-	set(value):
-		runtime_state.last_move_revealed_new_enemy = value
 var action_sequence: int:
 	get:
 		return runtime_state.action_sequence
@@ -499,7 +474,6 @@ func load_units(json_path: String) -> void:
 	BoardTurnService.reset_turn_action_flags(self, current_faction)
 	_clear_pending_attack()
 	_clear_pending_move_confirmation()
-	_clear_last_move_record()
 	unit_action_mode = ""
 	queue_redraw()
 	_update_turn_label()
@@ -820,39 +794,26 @@ func cmd_start_move_animation(unit_id: String, from_tile: Vector2i, to_tile: Vec
 func cmd_move_unit_to(unit_idx: int, target_tile: Vector2i) -> void:
 	_move_unit_to(unit_idx, target_tile)
 
-func cmd_set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_enemy: bool = false) -> void:
-	_set_last_move_record(unit_id, start_pos, end_pos, revealed_new_enemy)
-
 func cmd_try_award_transport_goal(unit_idx: int) -> bool:
 	return _try_award_transport_goal(unit_idx)
 
 func cmd_execute_unit_move(unit_idx: int, target_tile: Vector2i) -> Dictionary:
 	if unit_idx < 0 or unit_idx >= units.size():
-		return {"moved": false, "awarded": false, "revealed_new_enemy": false}
+		return {"moved": false, "awarded": false}
 	var start_tile := _to_vec2i(units[unit_idx].get(UnitState.POS, Vector2i.ZERO))
 	if start_tile == target_tile:
-		return {"moved": false, "awarded": false, "revealed_new_enemy": false}
+		return {"moved": false, "awarded": false}
 	var moved_unit_id := str(units[unit_idx].get(UnitState.ID, ""))
-	var faction := str(units[unit_idx].get(UnitState.FACTION, ""))
-	var visible_enemy_before := _visible_enemy_id_set_for_faction(faction)
 	_start_move_animation(moved_unit_id, start_tile, target_tile)
 	_move_unit_to(unit_idx, target_tile)
 	units[unit_idx][UnitState.MOVED] = true
 	action_sequence += 1
-	var visible_enemy_after := _visible_enemy_id_set_for_faction(faction)
-	var revealed_new_enemy := false
-	for enemy_id in visible_enemy_after.keys():
-		if not visible_enemy_before.has(enemy_id):
-			revealed_new_enemy = true
-			break
-	_set_last_move_record(moved_unit_id, start_tile, target_tile, revealed_new_enemy)
 	_clear_pending_move_confirmation()
 	var awarded := _try_award_transport_goal(unit_idx)
 	queue_redraw()
 	return {
 		"moved": true,
-		"awarded": awarded,
-		"revealed_new_enemy": revealed_new_enemy
+		"awarded": awarded
 	}
 
 func cmd_clear_pending_move_confirmation() -> void:
@@ -1016,9 +977,6 @@ func cmd_choose_unit_action(action: String) -> void:
 func cmd_clear_pending_attack() -> void:
 	_clear_pending_attack()
 
-func cmd_clear_last_move_record() -> void:
-	_clear_last_move_record()
-
 func cmd_clear_pending_production() -> void:
 	pending_production_tile = Vector2i(-1, -1)
 
@@ -1160,6 +1118,12 @@ func _end_turn() -> void:
 func end_turn() -> void:
 	if is_ai_running or is_turn_start_pause or is_battle_sequence_playing:
 		return
+	if _has_pending_attack():
+		_update_status("先に攻撃確認を完了してください。")
+		return
+	if _has_pending_move_confirmation():
+		_update_status("先に移動確認を完了してください。")
+		return
 	if deployment_active:
 		_update_status("初期配置フェイズ中はターン終了できません。")
 		return
@@ -1167,6 +1131,8 @@ func end_turn() -> void:
 
 func can_run_current_faction_auto_actions() -> bool:
 	if is_ai_running or is_turn_start_pause or is_battle_sequence_playing:
+		return false
+	if _has_pending_attack() or _has_pending_move_confirmation():
 		return false
 	if deployment_active:
 		return false
@@ -1183,7 +1149,6 @@ func run_current_faction_auto_actions() -> void:
 	selected_unit_idx = -1
 	_clear_pending_attack()
 	_clear_pending_move_confirmation()
-	_clear_last_move_record()
 	unit_action_mode = ""
 	_update_status("%s の未行動ユニットを自動行動中..." % faction.to_upper())
 	var unit_ids := BoardAITurnService.collect_unacted_unit_ids(self, faction)
@@ -1339,39 +1304,6 @@ func _has_pending_move_confirmation() -> bool:
 func _clear_pending_move_confirmation() -> void:
 	pending_move_confirm_unit_idx = -1
 	pending_move_confirm_target_tile = Vector2i(-1, -1)
-
-func _set_last_move_record(unit_id: String, start_pos: Vector2i, end_pos: Vector2i, revealed_new_enemy: bool = false) -> void:
-	last_move_unit_id = unit_id
-	last_move_from = start_pos
-	last_move_to = end_pos
-	last_move_action_sequence = action_sequence
-	last_move_revealed_new_enemy = revealed_new_enemy
-
-func _clear_last_move_record() -> void:
-	last_move_unit_id = ""
-	last_move_from = Vector2i.ZERO
-	last_move_to = Vector2i.ZERO
-	last_move_action_sequence = -1
-	last_move_revealed_new_enemy = false
-
-func _visible_enemy_id_set_for_faction(faction: String) -> Dictionary:
-	var key := faction.strip_edges().to_lower()
-	if key == "":
-		return {}
-	var visible := BoardVisibilityService.visible_tiles_for_faction(self, key)
-	var result := {}
-	for i in units.size():
-		var unit := units[i]
-		if str(unit.get(UnitState.FACTION, "")).strip_edges().to_lower() == key:
-			continue
-		var tile := _to_vec2i(unit.get(UnitState.POS, Vector2i(-1, -1)))
-		if not visible.has(tile):
-			continue
-		var unit_id := str(unit.get(UnitState.ID, ""))
-		if unit_id == "":
-			unit_id = "idx_%d" % i
-		result[unit_id] = true
-	return result
 
 func _unit_index_by_id(unit_id: String) -> int:
 	if unit_id == "":
@@ -1622,7 +1554,6 @@ func _try_award_transport_goal(unit_idx: int) -> bool:
 	_remove_unit_at(unit_idx, "transport_goal")
 	_clear_pending_attack()
 	_clear_pending_move_confirmation()
-	_clear_last_move_record()
 	selected_unit_idx = -1
 	unit_action_mode = ""
 	_update_turn_label()
