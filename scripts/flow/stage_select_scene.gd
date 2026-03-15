@@ -3,6 +3,13 @@ extends Control
 const EventEditorController = preload("res://scripts/ui/event_editor_controller.gd")
 const CHARACTER_PANEL_COUNT := 5
 const PORTRAIT_RATIO := 600.0 / 1280.0
+const CARD_BASE_COLORS := [
+	Color("e79ab8"),
+	Color("e6b97a"),
+	Color("78bec4"),
+	Color("9ba7e3"),
+	Color("a7c779")
+]
 
 @onready var character_scroll: ScrollContainer = $Margin/VBox/CharacterScroll
 @onready var character_row: HBoxContainer = $Margin/VBox/CharacterScroll/CharacterRow
@@ -14,6 +21,7 @@ var card_overlay_by_girl := {}
 
 func _ready() -> void:
 	_setup_event_editor()
+	_apply_scene_theme()
 	_build_character_panels()
 	resized.connect(_apply_panel_layout)
 	get_viewport().size_changed.connect(_apply_panel_layout)
@@ -52,6 +60,11 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 	card.size_flags_vertical = 0
 	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	card.text = ""
+	var accent := _accent_color(slot_index)
+	card.add_theme_stylebox_override("normal", _make_card_style(accent, 0.96))
+	card.add_theme_stylebox_override("hover", _make_card_style(accent.lightened(0.08), 1.0, 16.0))
+	card.add_theme_stylebox_override("pressed", _make_card_style(accent.darkened(0.08), 1.0, 16.0))
+	card.add_theme_stylebox_override("disabled", _make_card_style(Color("afb8c6"), 0.72))
 
 	var has_girl := not girl.is_empty()
 	var girl_id := str(girl.get("id", ""))
@@ -78,6 +91,7 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 	portrait.anchor_right = 1.0
 	portrait.anchor_bottom = 1.0
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.add_theme_stylebox_override("panel", _make_portrait_style(accent))
 	root.add_child(portrait)
 
 	var portrait_path := str(girl.get("portrait", "")).strip_edges()
@@ -117,6 +131,8 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 		placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		placeholder.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.95))
+		placeholder.add_theme_font_size_override("font_size", 20)
 		placeholder.text = "NO IMAGE" if has_girl else "COMING SOON"
 		portrait.add_child(placeholder)
 
@@ -127,6 +143,7 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 	overlay.anchor_right = 1.0
 	overlay.anchor_bottom = 1.0
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.add_theme_stylebox_override("panel", _make_overlay_style(accent))
 	portrait.add_child(overlay)
 
 	var overlay_root := VBoxContainer.new()
@@ -147,12 +164,18 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 	var overlay_title := Label.new()
 	overlay_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	overlay_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	overlay_title.add_theme_color_override("font_color", Color("5f335f"))
+	overlay_title.add_theme_font_size_override("font_size", 18)
 	overlay_title.text = "%s / STAGE" % girl_name
 	header.add_child(overlay_title)
 
 	var overlay_close := Button.new()
 	overlay_close.text = "閉"
 	overlay_close.custom_minimum_size = Vector2(36.0, 0.0)
+	overlay_close.add_theme_stylebox_override("normal", _make_chip_style(Color("ffffff"), accent.darkened(0.1)))
+	overlay_close.add_theme_stylebox_override("hover", _make_chip_style(Color("fff7d6"), accent))
+	overlay_close.add_theme_stylebox_override("pressed", _make_chip_style(Color("ffe3ef"), accent.darkened(0.14)))
+	overlay_close.add_theme_color_override("font_color", Color("5f335f"))
 	overlay_close.pressed.connect(_on_overlay_close_pressed)
 	header.add_child(overlay_close)
 
@@ -171,7 +194,8 @@ func _create_character_card(slot_index: int, girl: Dictionary) -> Button:
 			"overlay": overlay,
 			"stage_list": stage_list,
 			"title": overlay_title,
-			"girl_name": girl_name
+			"girl_name": girl_name,
+			"accent": accent
 		}
 
 	return card
@@ -202,22 +226,31 @@ func _refresh_character_card_states(selected_id: String) -> void:
 			continue
 		if card_id == selected_id:
 			card.modulate = Color(1.0, 1.0, 1.0, 1.0)
+			card.scale = Vector2.ONE * 1.02
 		else:
-			card.modulate = Color(0.86, 0.86, 0.9, 1.0)
+			card.modulate = Color(0.94, 0.95, 1.0, 0.96)
+			card.scale = Vector2.ONE
 
 func _refresh_stage_overlay_list(target_stage_list: VBoxContainer) -> void:
 	for child in target_stage_list.get_children():
 		child.queue_free()
 	var stages := GameFlow.get_selected_girl_stages()
+	var accent := Color("ff8bb4")
+	if card_overlay_by_girl.has(overlay_girl_id):
+		var entry: Dictionary = card_overlay_by_girl.get(overlay_girl_id, {})
+		var accent_value: Variant = entry.get("accent", accent)
+		if accent_value is Color:
+			accent = accent_value
 	if stages.is_empty():
 		var empty_label := Label.new()
 		empty_label.text = "ステージが設定されていません。"
+		empty_label.add_theme_color_override("font_color", Color("5f335f"))
 		target_stage_list.add_child(empty_label)
 		return
 	for stage in stages:
 		var box := VBoxContainer.new()
 		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		box.add_theme_constant_override("separation", 0)
+		box.add_theme_constant_override("separation", 4)
 		target_stage_list.add_child(box)
 
 		var index := int(stage.get("index", 0))
@@ -229,6 +262,13 @@ func _refresh_stage_overlay_list(target_stage_list: VBoxContainer) -> void:
 		start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		start_button.text = _build_stage_label(index, unlocked, cleared, exists)
 		start_button.disabled = not unlocked or not exists
+		start_button.add_theme_stylebox_override("normal", _make_stage_button_style(accent, unlocked, cleared, exists))
+		start_button.add_theme_stylebox_override("hover", _make_stage_button_style(accent.lightened(0.08), unlocked, cleared, exists))
+		start_button.add_theme_stylebox_override("pressed", _make_stage_button_style(accent.darkened(0.06), unlocked, cleared, exists))
+		start_button.add_theme_stylebox_override("disabled", _make_stage_button_style(Color("c8cfdb"), false, false, exists))
+		start_button.add_theme_color_override("font_color", _stage_button_font_color(unlocked, cleared, exists))
+		start_button.add_theme_font_size_override("font_size", 18)
+		start_button.custom_minimum_size = Vector2(0.0, 46.0)
 		start_button.pressed.connect(_on_stage_pressed.bind(index))
 		box.add_child(start_button)
 
@@ -334,3 +374,137 @@ func _save_stage_event_config(event_key: String, event_data: Dictionary) -> bool
 
 func _on_stage_event_saved(_message: String) -> void:
 	_refresh_open_overlay_list()
+
+func _apply_scene_theme() -> void:
+	character_scroll.add_theme_stylebox_override("panel", _make_scroll_style())
+
+func _accent_color(slot_index: int) -> Color:
+	return CARD_BASE_COLORS[slot_index % CARD_BASE_COLORS.size()]
+
+func _make_card_style(accent: Color, alpha: float, shadow_size: float = 12.0) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(1.0, 0.992, 0.988, alpha)
+	style.border_color = accent
+	style.border_width_left = 4
+	style.border_width_top = 4
+	style.border_width_right = 4
+	style.border_width_bottom = 4
+	style.corner_radius_top_left = 26
+	style.corner_radius_top_right = 26
+	style.corner_radius_bottom_right = 26
+	style.corner_radius_bottom_left = 26
+	style.shadow_color = Color(accent.r, accent.g, accent.b, 0.14)
+	style.shadow_size = int(shadow_size)
+	style.shadow_offset = Vector2(0, 6)
+	style.content_margin_left = 8.0
+	style.content_margin_top = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_bottom = 8.0
+	return style
+
+func _make_portrait_style(accent: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(1.0, 1.0, 1.0, 0.96)
+	style.border_color = accent.lightened(0.08)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 22
+	style.corner_radius_top_right = 22
+	style.corner_radius_bottom_right = 22
+	style.corner_radius_bottom_left = 22
+	style.content_margin_left = 10.0
+	style.content_margin_top = 10.0
+	style.content_margin_right = 10.0
+	style.content_margin_bottom = 10.0
+	return style
+
+func _make_overlay_style(accent: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.992, 0.978, 0.986, 0.9)
+	style.border_color = accent
+	style.border_width_left = 3
+	style.border_width_top = 3
+	style.border_width_right = 3
+	style.border_width_bottom = 3
+	style.corner_radius_top_left = 20
+	style.corner_radius_top_right = 20
+	style.corner_radius_bottom_right = 20
+	style.corner_radius_bottom_left = 20
+	style.shadow_color = Color(0.35, 0.2, 0.35, 0.1)
+	style.shadow_size = 8
+	style.shadow_offset = Vector2(0, 4)
+	style.content_margin_left = 12.0
+	style.content_margin_top = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 12.0
+	return style
+
+func _make_chip_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.corner_radius_top_left = 14
+	style.corner_radius_top_right = 14
+	style.corner_radius_bottom_right = 14
+	style.corner_radius_bottom_left = 14
+	style.content_margin_left = 8.0
+	style.content_margin_top = 4.0
+	style.content_margin_right = 8.0
+	style.content_margin_bottom = 4.0
+	return style
+
+func _make_scroll_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(1.0, 1.0, 1.0, 0.34)
+	style.corner_radius_top_left = 30
+	style.corner_radius_top_right = 30
+	style.corner_radius_bottom_right = 30
+	style.corner_radius_bottom_left = 30
+	style.content_margin_left = 18.0
+	style.content_margin_top = 18.0
+	style.content_margin_right = 18.0
+	style.content_margin_bottom = 18.0
+	return style
+
+func _make_stage_button_style(accent: Color, unlocked: bool, cleared: bool, exists: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.corner_radius_bottom_right = 16
+	style.corner_radius_bottom_left = 16
+	style.content_margin_left = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 8.0
+	if not exists:
+		style.bg_color = Color("ede7f0")
+		style.border_color = Color("cbbfd6")
+	elif cleared:
+		style.bg_color = Color("f6e8a9")
+		style.border_color = Color("ddb45d")
+	elif unlocked:
+		style.bg_color = accent.lightened(0.26)
+		style.border_color = accent.darkened(0.02)
+	else:
+		style.bg_color = Color("e7ebf3")
+		style.border_color = Color("c1cad8")
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	return style
+
+func _stage_button_font_color(unlocked: bool, cleared: bool, exists: bool) -> Color:
+	if not exists:
+		return Color("8a6f96")
+	if cleared:
+		return Color("7b4b00")
+	if unlocked:
+		return Color("59335f")
+	return Color("6b7380")

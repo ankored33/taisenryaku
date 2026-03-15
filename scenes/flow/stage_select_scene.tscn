@@ -11,6 +11,39 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_stage_select")
 
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.988235, 0.972549, 0.964706, 1)
+
+[node name="AccentBubbleA" type="ColorRect" parent="."]
+layout_mode = 1
+offset_left = -48.0
+offset_top = -36.0
+offset_right = 284.0
+offset_bottom = 292.0
+color = Color(0.937255, 0.792157, 0.611765, 0.18)
+
+[node name="AccentBubbleB" type="ColorRect" parent="."]
+layout_mode = 1
+offset_left = 1040.0
+offset_top = 56.0
+offset_right = 1448.0
+offset_bottom = 448.0
+color = Color(0.639216, 0.827451, 0.866667, 0.16)
+
+[node name="AccentBubbleC" type="ColorRect" parent="."]
+layout_mode = 1
+offset_left = 920.0
+offset_top = 540.0
+offset_right = 1320.0
+offset_bottom = 920.0
+color = Color(0.921569, 0.694118, 0.745098, 0.14)
+
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -35,12 +68,17 @@ theme_override_constants/separation = 16
 [node name="Title" type="Label" parent="Margin/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.345098, 0.235294, 0.427451, 1)
+theme_override_colors/font_shadow_color = Color(1, 1, 1, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 2
 text = "キャラクター / ステージ選択"
 
 [node name="CharacterScroll" type="ScrollContainer" parent="Margin/VBox"]
 layout_mode = 2
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 0
+clip_contents = false
 
 [node name="CharacterRow" type="HBoxContainer" parent="Margin/VBox/CharacterScroll"]
 layout_mode = 2
